@@ -1,7 +1,23 @@
-FROM python:3.11-slim
 
+
+
+
+
+
+
+
+
+# 1. Build frontend
+FROM node:18 AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
+COPY frontend .
+RUN npm run build
+
+# 2. Build backend
+FROM python:3.11-slim AS backend
 WORKDIR /app
-
 # Instalar dependencias del sistema para PIL
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -16,18 +32,18 @@ RUN apt-get update && apt-get install -y \
 
 # Copiar requirements
 COPY requirements.txt .
-
 # Instalar dependencias Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código
-COPY . .
+# Copiar backend y build del frontend
+COPY app ./app
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Crear directorios necesarios
-RUN mkdir -p numeros_generados
+RUN mkdir -p data/numeros_generados
 
 # Exponer puerto
 EXPOSE 8000
 
 # Comando para ejecutar
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

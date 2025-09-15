@@ -10,10 +10,12 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
 
+import pathlib
 # Configuración
 MAX_REGISTROS = 2000
-DB_NAME = 'carrera_medico.db'
-BASE_IMG_PATH = 'carrera_medico_template.png'
+DATA_DIR = pathlib.Path('data')
+DB_NAME = str(DATA_DIR / 'carrera_medico.db')
+BASE_IMG_PATH = str(DATA_DIR / 'carrera_medico_template.png')
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
 
@@ -26,11 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Servir archivos estáticos
-if not os.path.exists("numeros_generados"):
-    os.makedirs("numeros_generados")
-
-app.mount("/static", StaticFiles(directory="numeros_generados"), name="static")
+NUMEROS_GENERADOS_DIR = DATA_DIR / 'numeros_generados'
+NUMEROS_GENERADOS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(NUMEROS_GENERADOS_DIR)), name="static")
+app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="frontend")
 
 # Modelos Pydantic
 class ParticipanteCreate(BaseModel):
@@ -90,61 +91,47 @@ def generar_numero_participante(participante_id: int, nombre: str):
         # Crear imagen base si no existe
         if os.path.exists(BASE_IMG_PATH):
             img = Image.open(BASE_IMG_PATH)
-        else:
-            # Crear imagen básica
-            img = Image.new('RGB', (800, 600), color='white')
-            draw = ImageDraw.Draw(img)
-            
-            # Dibujar borde
-            draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
-            
-            # Título
-            try:
-                font_titulo = ImageFont.truetype('arial.ttf', 48)
-            except:
-                font_titulo = ImageFont.load_default()
-            
-            draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, 
-                     fill='black', anchor='mt')
-        
-        # Preparar el dibujo
-        draw = ImageDraw.Draw(img)
-        
-        # Configurar fuentes
         try:
-            font_numero = ImageFont.truetype('arial.ttf', 120)
-            font_nombre = ImageFont.truetype('arial.ttf', 36)
-        except:
-            font_numero = ImageFont.load_default()
-            font_nombre = ImageFont.load_default()
-        
-        # Formatear número con ceros a la izquierda
-        numero_formateado = f"{participante_id:04d}"
-        
-        # Posición centrada para el número
-        img_width, img_height = img.size
-        
-        # Dibujar número del participante (más grande)
-        draw.text((img_width//2, img_height//2 - 60), numero_formateado, 
-                 font=font_numero, fill='black', anchor='mm')
-        
-        # Dibujar nombre (debajo del número)
-        draw.text((img_width//2, img_height//2 + 40), nombre, 
-                 font=font_nombre, fill='blue', anchor='mm')
-        
-        # Guardar imagen
-        filename = f"participante_{numero_formateado}_{nombre.replace(' ', '_')}.png"
-        filepath = os.path.join('numeros_generados', filename)
-        img.save(filepath)
-        
-        return filepath
-        
-    except Exception as e:
-        print(f"Error al generar imagen: {e}")
-        return None
-
-# Inicializar base de datos al arrancar
-crear_tablas()
+            # Crear imagen base si no existe
+            if os.path.exists(BASE_IMG_PATH):
+                img = Image.open(BASE_IMG_PATH)
+            else:
+                # Crear imagen básica
+                img = Image.new('RGB', (800, 600), color='white')
+                draw = ImageDraw.Draw(img)
+                # Dibujar borde
+                draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
+                # Título
+                try:
+                    font_titulo = ImageFont.truetype('arial.ttf', 48)
+                except Exception:
+                    font_titulo = ImageFont.load_default()
+                draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, fill='black', anchor='mt')
+            # Preparar el dibujo
+            draw = ImageDraw.Draw(img)
+            # Configurar fuentes
+            try:
+                font_numero = ImageFont.truetype('arial.ttf', 120)
+                font_nombre = ImageFont.truetype('arial.ttf', 36)
+            except Exception:
+                font_numero = ImageFont.load_default()
+                font_nombre = ImageFont.load_default()
+            # Formatear número con ceros a la izquierda
+            numero_formateado = f"{participante_id:04d}"
+            # Posición centrada para el número
+            img_width, img_height = img.size
+            # Dibujar número del participante (más grande)
+            draw.text((img_width//2, img_height//2 - 60), numero_formateado, font=font_numero, fill='black', anchor='mm')
+            # Dibujar nombre (debajo del número)
+            draw.text((img_width//2, img_height//2 + 40), nombre, font=font_nombre, fill='blue', anchor='mm')
+            # Guardar imagen
+            filename = f"participante_{numero_formateado}_{nombre.replace(' ', '_')}.png"
+            filepath = NUMEROS_GENERADOS_DIR / filename
+            img.save(str(filepath))
+            return str(filepath)
+        except Exception as e:
+            print(f"Error al generar imagen: {e}")
+            return None
 
 # Endpoints
 @app.get("/")
@@ -240,24 +227,19 @@ async def descargar_imagen(numero_participante: str):
     """Descarga la imagen del número de participante"""
     
     # Buscar el archivo en el directorio
-    archivos = os.listdir('numeros_generados')
+    archivos = os.listdir(str(NUMEROS_GENERADOS_DIR))
     archivo_encontrado = None
-    
     for archivo in archivos:
         if archivo.startswith(f"participante_{numero_participante}_"):
             archivo_encontrado = archivo
             break
-    
     if not archivo_encontrado:
         raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    
-    filepath = os.path.join('numeros_generados', archivo_encontrado)
-    
-    if not os.path.exists(filepath):
+    filepath = NUMEROS_GENERADOS_DIR / archivo_encontrado
+    if not filepath.exists():
         raise HTTPException(status_code=404, detail="Archivo de imagen no encontrado")
-    
     return FileResponse(
-        filepath,
+        str(filepath),
         media_type='image/png',
         filename=archivo_encontrado,
         headers={"Content-Disposition": f"attachment; filename={archivo_encontrado}"}
