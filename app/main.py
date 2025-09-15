@@ -96,47 +96,45 @@ def generar_numero_participante(participante_id: int, nombre: str):
         # Crear imagen base si no existe
         if os.path.exists(BASE_IMG_PATH):
             img = Image.open(BASE_IMG_PATH)
-        try:
-            # Crear imagen base si no existe
-            if os.path.exists(BASE_IMG_PATH):
-                img = Image.open(BASE_IMG_PATH)
-            else:
-                # Crear imagen básica
-                img = Image.new('RGB', (800, 600), color='white')
-                draw = ImageDraw.Draw(img)
-                # Dibujar borde
-                draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
-                # Título
-                try:
-                    font_titulo = ImageFont.truetype('arial.ttf', 48)
-                except Exception:
-                    font_titulo = ImageFont.load_default()
-                draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, fill='black', anchor='mt')
-            # Preparar el dibujo
+        else:
+            # Crear imagen básica
+            img = Image.new('RGB', (800, 600), color='white')
             draw = ImageDraw.Draw(img)
-            # Configurar fuentes
+            # Dibujar borde
+            draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
+            # Título
             try:
-                font_numero = ImageFont.truetype('arial.ttf', 120)
-                font_nombre = ImageFont.truetype('arial.ttf', 36)
+                font_titulo = ImageFont.truetype('arial.ttf', 48)
             except Exception:
-                font_numero = ImageFont.load_default()
-                font_nombre = ImageFont.load_default()
-            # Formatear número con ceros a la izquierda
-            numero_formateado = f"{participante_id:04d}"
-            # Posición centrada para el número
-            img_width, img_height = img.size
-            # Dibujar número del participante (más grande)
-            draw.text((img_width//2, img_height//2 - 60), numero_formateado, font=font_numero, fill='black', anchor='mm')
-            # Dibujar nombre (debajo del número)
-            draw.text((img_width//2, img_height//2 + 40), nombre, font=font_nombre, fill='blue', anchor='mm')
-            # Guardar imagen
-            filename = f"participante_{numero_formateado}_{nombre.replace(' ', '_')}.png"
-            filepath = NUMEROS_GENERADOS_DIR / filename
-            img.save(str(filepath))
-            return str(filepath)
-        except Exception as e:
-            print(f"Error al generar imagen: {e}")
-            return None
+                font_titulo = ImageFont.load_default()
+            draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, fill='black', anchor='mt')
+        # Preparar el dibujo
+        draw = ImageDraw.Draw(img)
+        # Configurar fuentes
+        try:
+            font_numero = ImageFont.truetype('arial.ttf', 120)
+            font_nombre = ImageFont.truetype('arial.ttf', 36)
+        except Exception:
+            font_numero = ImageFont.load_default()
+            font_nombre = ImageFont.load_default()
+        # Formatear número con ceros a la izquierda
+        numero_formateado = f"{participante_id:04d}"
+        # Posición centrada para el número
+        img_width, img_height = img.size
+        # Dibujar número del participante (más grande)
+        draw.text((img_width//2, img_height//2 - 60), numero_formateado, font=font_numero, fill='black', anchor='mm')
+        # Dibujar nombre (debajo del número)
+        draw.text((img_width//2, img_height//2 + 40), nombre, font=font_nombre, fill='blue', anchor='mm')
+        # Guardar imagen
+        filename = f"participante_{numero_formateado}_{nombre.replace(' ', '_')}.png"
+        filepath = NUMEROS_GENERADOS_DIR / filename
+        img.save(str(filepath))
+        return str(filepath)
+    except Exception as e:
+        import traceback
+        print(f"Error al generar imagen: {e}")
+        traceback.print_exc()
+        return None
 
 # Endpoints
 @app.get("/")
@@ -291,5 +289,14 @@ async def listar_participantes(limit: int = 100, offset: int = 0):
         con.close()
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import sys
+    if "--init-db" in sys.argv:
+        import traceback
+        try:
+            crear_tablas()
+        except Exception as e:
+            print(f"Error en crear_tablas: {e}")
+            traceback.print_exc()
+    else:
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)

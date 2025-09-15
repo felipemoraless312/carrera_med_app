@@ -23,4 +23,4 @@ primary_region = "mia"
   destination = "/app/data"
 
 [deploy]
-  release_command = "python -c 'from app.main import crear_tablas; crear_tablas()'"
+  release_command = "python app/main.py --init-db"
