@@ -51,9 +51,14 @@ def conectar_bd():
     return sqlite3.connect(DB_NAME)
 
 def crear_tablas():
+    # Asegurar que el directorio 'data' existe
+    import os
+    data_dir = os.path.dirname(DB_NAME)
+    if data_dir and not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+
     con = conectar_bd()
     cursor = con.cursor()
-    
     try:
         cursor.execute("""CREATE TABLE IF NOT EXISTS participantes (
             id INTEGER PRIMARY KEY,
