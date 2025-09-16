@@ -15,22 +15,20 @@ import pathlib
 MAX_REGISTROS = 2000
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
-BASE_IMG_PATH = str(DATA_DIR / 'carrera_medico_template.png')
+BASE_IMG_PATH = 'carrera_medico_template.png'
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especifica el dominio de tu frontend
+    allow_origins=["https://carrera-med-app.fly.dev"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-NUMEROS_GENERADOS_DIR = DATA_DIR / 'numeros_generados'
-NUMEROS_GENERADOS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(NUMEROS_GENERADOS_DIR)), name="static")
+ # Eliminado almacenamiento de imágenes generadas
 app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="frontend")
 
 # Modelos Pydantic
@@ -92,23 +90,10 @@ def verificar_limite_registros():
 
 def generar_numero_participante(participante_id: int, nombre: str):
     """Genera la imagen con el número del participante"""
+    from io import BytesIO
     try:
-        # Crear imagen base si no existe
-        if os.path.exists(BASE_IMG_PATH):
-            img = Image.open(BASE_IMG_PATH)
-        else:
-            # Crear imagen básica
-            img = Image.new('RGB', (800, 600), color='white')
-            draw = ImageDraw.Draw(img)
-            # Dibujar borde
-            draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
-            # Título
-            try:
-                font_titulo = ImageFont.truetype('arial.ttf', 48)
-            except Exception:
-                font_titulo = ImageFont.load_default()
-            draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, fill='black', anchor='mt')
-        # Preparar el dibujo
+        # Usar la imagen base del repo
+        img = Image.open(BASE_IMG_PATH)
         draw = ImageDraw.Draw(img)
         # Configurar fuentes
         try:
@@ -125,11 +110,11 @@ def generar_numero_participante(participante_id: int, nombre: str):
         draw.text((img_width//2, img_height//2 - 60), numero_formateado, font=font_numero, fill='black', anchor='mm')
         # Dibujar nombre (debajo del número)
         draw.text((img_width//2, img_height//2 + 40), nombre, font=font_nombre, fill='blue', anchor='mm')
-        # Guardar imagen
-        filename = f"participante_{numero_formateado}_{nombre.replace(' ', '_')}.png"
-        filepath = NUMEROS_GENERADOS_DIR / filename
-        img.save(str(filepath))
-        return str(filepath)
+        # Guardar imagen en memoria
+        img_bytes = BytesIO()
+        img.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        return img_bytes
     except Exception as e:
         import traceback
         print(f"Error al generar imagen: {e}")
@@ -202,13 +187,8 @@ async def registrar_participante(participante: ParticipanteCreate):
         
         con.commit()
         
-        # Generar imagen con el número
-        imagen_path = generar_numero_participante(next_id, participante.nombre.strip())
-        
-        imagen_url = None
-        if imagen_path and os.path.exists(imagen_path):
-            imagen_url = f"/api/imagen/{numero_asignado}"
-        
+        # La imagen se genera bajo demanda, no se almacena ni se guarda ruta
+        imagen_url = f"/api/imagen/{numero_asignado}?nombre={participante.nombre.strip()}"
         return ParticipanteResponse(
             id=next_id,
             numero_asignado=numero_asignado,
@@ -229,24 +209,24 @@ async def registrar_participante(participante: ParticipanteCreate):
 async def descargar_imagen(numero_participante: str):
     """Descarga la imagen del número de participante"""
     
-    # Buscar el archivo en el directorio
-    archivos = os.listdir(str(NUMEROS_GENERADOS_DIR))
-    archivo_encontrado = None
-    for archivo in archivos:
-        if archivo.startswith(f"participante_{numero_participante}_"):
-            archivo_encontrado = archivo
-            break
-    if not archivo_encontrado:
-        raise HTTPException(status_code=404, detail="Imagen no encontrada")
-    filepath = NUMEROS_GENERADOS_DIR / archivo_encontrado
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail="Archivo de imagen no encontrado")
-    return FileResponse(
-        str(filepath),
-        media_type='image/png',
-        filename=archivo_encontrado,
-        headers={"Content-Disposition": f"attachment; filename={archivo_encontrado}"}
-    )
+    from fastapi import Query
+    from starlette.responses import StreamingResponse
+    nombre = Query(None)
+    # Si el nombre no viene por query, error
+    import inspect
+    # Obtener el nombre desde la query params
+    frame = inspect.currentframe()
+    request = frame.f_back.f_locals.get('request', None)
+    if request:
+        nombre = request.query_params.get('nombre', None)
+    if not nombre:
+        raise HTTPException(status_code=400, detail="Nombre requerido para generar la imagen")
+    # Generar imagen en memoria
+    img_bytes = generar_numero_participante(int(numero_participante), nombre)
+    if not img_bytes:
+        raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
+    filename = f"participante_{numero_participante}_{nombre.replace(' ', '_')}.png"
+    return StreamingResponse(img_bytes, media_type='image/png', headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 @app.get("/api/participantes")
 async def listar_participantes(limit: int = 100, offset: int = 0):
@@ -290,13 +270,18 @@ async def listar_participantes(limit: int = 100, offset: int = 0):
 
 if __name__ == "__main__":
     import sys
-    if "--init-db" in sys.argv:
-        import traceback
-        try:
+    import traceback
+    print("Entrando a main.py (__main__)")
+    print(f"Argumentos: {sys.argv}")
+    try:
+        if "--init-db" in sys.argv:
+            print("Ejecutando crear_tablas()...")
             crear_tablas()
-        except Exception as e:
-            print(f"Error en crear_tablas: {e}")
-            traceback.print_exc()
-    else:
-        import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+            print("crear_tablas() ejecutado correctamente.")
+        else:
+            print("Ejecutando uvicorn...")
+            import uvicorn
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+    except Exception as e:
+        print(f"Error global en main.py: {e}")
+        traceback.print_exc()
