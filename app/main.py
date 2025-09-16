@@ -37,17 +37,28 @@ SECTORES_SALUD = [
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
 
+# Inicializar la BD automáticamente al arrancar
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 Iniciando aplicación...")
+    crear_tablas()
+    print("✅ Base de datos inicializada")
+    
+    # Verificar estado actual
+    puede_registrar, total = verificar_limite_registros()
+    print(f"📊 Registros actuales: {total}/{MAX_REGISTROS}")
+    print(f"🟢 Puede registrar: {'Sí' if puede_registrar else 'No'}")
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://carrera-med-app.fly.dev"],
+    allow_origins=["*"],  # Temporalmente permitir todos los orígenes para debug
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Servir archivos estáticos del frontend
-app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+# MOVER ESTO AL FINAL - después de definir todos los endpoints API
 
 # Modelos Pydantic
 class ParticipanteCreate(BaseModel):
@@ -170,6 +181,19 @@ def generar_numero_participante(participante_id: int, nombre: str):
 async def root():
     return {"message": "API Carrera del Médico funcionando correctamente"}
 
+@app.get("/api/health")
+async def health_check():
+    """Endpoint de salud para verificar que la API funciona"""
+    puede_registrar, total = verificar_limite_registros()
+    return {
+        "status": "healthy",
+        "api_version": "1.0.0",
+        "database_connected": True,
+        "total_registros": total,
+        "puede_registrar": puede_registrar,
+        "timestamp": datetime.now().isoformat()
+    }
+
 @app.get("/api/status")
 async def get_status():
     puede_registrar, total_actual = verificar_limite_registros()
@@ -186,6 +210,9 @@ async def get_sectores():
 
 @app.post("/api/registro", response_model=ParticipanteResponse)
 async def registrar_participante(participante: ParticipanteCreate):
+    """Registrar un nuevo participante"""
+    print(f"🔵 POST /api/registro recibido: {participante}")  # Debug log
+    
     # Validaciones básicas (iguales a Gradio)
     if not all([participante.nombre.strip(), participante.sexo, 
                 participante.telefono.strip(), participante.sector_profesional]):
@@ -238,6 +265,7 @@ async def registrar_participante(participante: ParticipanteCreate):
                        participante.telefono.strip(), participante.sector_profesional, numero_asignado))
         
         con.commit()
+        print(f"✅ Participante registrado: {numero_asignado} - {participante.nombre.strip()}")  # Debug log
         
         # La imagen se genera bajo demanda
         imagen_url = f"/api/imagen/{numero_asignado}?nombre={participante.nombre.strip()}"
@@ -254,6 +282,7 @@ async def registrar_participante(participante: ParticipanteCreate):
         raise
     except Exception as e:
         con.rollback()
+        print(f"❌ Error en registro: {str(e)}")  # Debug log
         raise HTTPException(status_code=500, detail=f"Error en el registro: {str(e)}")
     finally:
         con.close()
@@ -356,20 +385,18 @@ async def listar_participantes(limit: int = 100, offset: int = 0):
     finally:
         con.close()
 
+# IMPORTANTE: Montar archivos estáticos AL FINAL para no interferir con la API
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+
 if __name__ == "__main__":
     import sys
     import traceback
     print("Entrando a main.py (__main__)")
     print(f"Argumentos: {sys.argv}")
     try:
-        if "--init-db" in sys.argv:
-            print("Ejecutando crear_tablas()...")
-            crear_tablas()
-            print("crear_tablas() ejecutado correctamente.")
-        else:
-            print("Ejecutando uvicorn...")
-            import uvicorn
-            uvicorn.run(app, host="0.0.0.0", port=8000)
+        print("Ejecutando uvicorn...")
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
     except Exception as e:
         print(f"Error global en main.py: {e}")
         traceback.print_exc()
