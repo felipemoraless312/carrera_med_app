@@ -287,23 +287,33 @@ async def descargar_imagen(numero_participante: str, request: Request):
         if not participante:
             raise HTTPException(status_code=404, detail="Participante no encontrado")
         
+        # Usar el nombre real de la BD, no el del query param
+        nombre_real = participante[0]
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error al verificar participante")
     finally:
         con.close()
     
-    # Generar imagen en memoria
-    img_bytes = generar_numero_participante(participant_id, nombre)
+    # Generar imagen en memoria con el nombre real
+    img_bytes = generar_numero_participante(participant_id, nombre_real)
     
     if not img_bytes:
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
     
-    filename = f"participante_{numero_participante}_{nombre.replace(' ', '_')}.png"
+    filename = f"participante_{numero_participante}_{nombre_real.replace(' ', '_')}.png"
+    
+    # Debug logging
+    print(f"Generando imagen para: {numero_participante} - {nombre_real}")
+    print(f"Tamaño del archivo: {img_bytes.tell() if hasattr(img_bytes, 'tell') else 'unknown'} bytes")
     
     return StreamingResponse(
         img_bytes, 
         media_type='image/png', 
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "image/png"
+        }
     )
 
 @app.get("/api/participantes")

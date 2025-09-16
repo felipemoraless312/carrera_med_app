@@ -11,7 +11,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   const [sectoresSalud, setSectoresSalud] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [registrationResult, setRegistrationResult] = useState(null);
-  const [registrationData, setRegistrationData] = useState(null); // Para guardar datos completos de la respuesta
+  const [participantData, setParticipantData] = useState(null);
 
   // Cargar sectores desde la API
   useEffect(() => {
@@ -40,7 +40,6 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         }
       } catch (error) {
         console.error('Error al cargar sectores:', error);
-        // Fallback en caso de error
         setSectoresSalud([
           "Medicina General",
           "Enfermería", 
@@ -107,12 +106,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
     setIsLoading(true);
     setRegistrationResult(null);
-    setRegistrationData(null);
+    setParticipantData(null);
 
     try {
-      console.log('Enviando datos:', formData); // Debug
+      console.log('Enviando datos:', formData); // Para debug
 
-      // LLAMADA REAL A LA API
       const response = await fetch('/api/registro', {
         method: 'POST',
         headers: {
@@ -127,25 +125,30 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
       });
 
       const data = await response.json();
-      console.log('Respuesta de la API:', data); // Debug
+      console.log('Respuesta del servidor:', data); // Para debug
 
       if (response.ok) {
-        // Registro exitoso - USAR DATOS REALES DE LA API
+        // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
         setRegistrationResult({
           type: 'success',
           message: data.message,
-          numero: data.numero_asignado // Usar el número real de la API
+          numero: data.numero_asignado
         });
         
-        // Guardar todos los datos de la respuesta
-        setRegistrationData({
-          ...data,
-          nombre: formData.nombre.trim() // Preservar el nombre para la descarga
+        // Guardar datos del participante para la descarga
+        setParticipantData({
+          numero: data.numero_asignado,
+          nombre: formData.nombre.trim(),
+          imagen_url: data.imagen_url
         });
 
-        // NO limpiar formulario inmediatamente para permitir descarga
-        // Se limpiará después de descargar la imagen o manualmente
-
+        // Limpiar formulario SOLO después del registro exitoso
+        setFormData({
+          nombre: '',
+          sexo: '',
+          telefono: '',
+          sector_profesional: ''
+        });
       } else {
         // Error del servidor
         setRegistrationResult({
@@ -165,68 +168,53 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   };
 
   const downloadImage = async () => {
-    if (!registrationData || !registrationData.numero_asignado || !registrationData.nombre) {
-      console.error('Datos de registro incompletos');
-      setRegistrationResult({
-        type: 'error',
-        message: 'Error: No se pueden generar los datos para la imagen'
-      });
+    if (!participantData) {
+      console.error('No hay datos del participante');
       return;
     }
 
     try {
-      console.log('Descargando imagen para:', registrationData); // Debug
+      console.log('Descargando imagen para:', participantData); // Para debug
       
-      // Construir URL correcta con parámetros
-      const imageUrl = `/api/imagen/${registrationData.numero_asignado}?nombre=${encodeURIComponent(registrationData.nombre)}`;
-      console.log('URL de imagen:', imageUrl); // Debug
+      // Construir URL de descarga
+      const imageUrl = `/api/imagen/${participantData.numero}?nombre=${encodeURIComponent(participantData.nombre)}`;
+      console.log('URL de imagen:', imageUrl); // Para debug
 
-      // Hacer fetch para obtener la imagen
+      // Hacer fetch de la imagen
       const response = await fetch(imageUrl);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al generar imagen');
+        throw new Error(`Error HTTP: ${response.status}`);
       }
 
-      // Obtener la imagen como blob
+      // Convertir a blob
       const blob = await response.blob();
       
       if (blob.size === 0) {
-        throw new Error('La imagen generada está vacía');
+        throw new Error('Imagen vacía recibida');
       }
 
       // Crear URL temporal para el blob
-      const blobUrl = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       
       // Crear enlace de descarga
       const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `participante_${registrationData.numero_asignado}_${registrationData.nombre.replace(/\s+/g, '_')}.png`;
+      link.href = downloadUrl;
+      link.download = `participante_${participantData.numero}_${participantData.nombre.replace(/\s+/g, '_')}.png`;
       
-      // Trigger descarga
+      // Agregar al DOM, hacer clic y remover
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
       // Limpiar URL temporal
-      window.URL.revokeObjectURL(blobUrl);
+      window.URL.revokeObjectURL(downloadUrl);
 
-      // Ahora sí limpiar el formulario después de descarga exitosa
-      setFormData({
-        nombre: '',
-        sexo: '',
-        telefono: '',
-        sector_profesional: ''
-      });
-
-      console.log('Descarga completada exitosamente');
-      
     } catch (error) {
       console.error('Error al descargar imagen:', error);
       setRegistrationResult({
         type: 'error',
-        message: `Error al descargar imagen: ${error.message}`
+        message: 'Error al descargar la imagen. Intente nuevamente.'
       });
     }
   };
@@ -237,17 +225,6 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     } else if (setActiveSection) {
       setActiveSection('registro');
     }
-  };
-
-  const clearForm = () => {
-    setFormData({
-      nombre: '',
-      sexo: '',
-      telefono: '',
-      sector_profesional: ''
-    });
-    setRegistrationResult(null);
-    setRegistrationData(null);
   };
 
   return (
@@ -283,27 +260,19 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 <p className="font-medium">{registrationResult.message}</p>
               </div>
               
-              {registrationResult.type === 'success' && registrationData && (
+              {registrationResult.type === 'success' && participantData && (
                 <div className="mt-4 p-4 bg-blue-950/50 rounded-xl">
                   <p className="text-sm text-gray-300 mb-3">Su número de participante:</p>
                   <div className="text-2xl font-black text-blue-400 mb-4 text-center">
-                    {registrationResult.numero}
+                    {participantData.numero}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={downloadImage}
-                      className="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      Descargar Número
-                    </button>
-                    <button
-                      onClick={clearForm}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300"
-                    >
-                      Nuevo Registro
-                    </button>
-                  </div>
+                  <button
+                    onClick={downloadImage}
+                    className="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Descargar Número de Participante
+                  </button>
                 </div>
               )}
             </div>
