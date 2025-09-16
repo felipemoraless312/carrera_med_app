@@ -15,7 +15,7 @@ import pathlib
 MAX_REGISTROS = 2000
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
-BASE_IMG_PATH = 'carrera_medico_template.png'
+BASE_IMG_PATH = 'app/carrera_medico_template.png'
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
 
