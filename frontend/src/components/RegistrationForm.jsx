@@ -11,7 +11,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   const [sectoresSalud, setSectoresSalud] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [registrationResult, setRegistrationResult] = useState(null);
-  const [imageUrl, setImageUrl] = useState(null);
+  const [registrationData, setRegistrationData] = useState(null); // Para guardar datos completos de la respuesta
 
   // Cargar sectores desde la API
   useEffect(() => {
@@ -107,9 +107,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
     setIsLoading(true);
     setRegistrationResult(null);
-    setImageUrl(null);
+    setRegistrationData(null);
 
     try {
+      console.log('Enviando datos:', formData); // Debug
+
       // LLAMADA REAL A LA API
       const response = await fetch('/api/registro', {
         method: 'POST',
@@ -125,27 +127,25 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
       });
 
       const data = await response.json();
+      console.log('Respuesta de la API:', data); // Debug
 
       if (response.ok) {
-        // Registro exitoso
+        // Registro exitoso - USAR DATOS REALES DE LA API
         setRegistrationResult({
           type: 'success',
           message: data.message,
-          numero: data.numero_asignado
+          numero: data.numero_asignado // Usar el número real de la API
         });
         
-        // Configurar URL de descarga de imagen
-        if (data.imagen_url) {
-          setImageUrl(data.imagen_url);
-        }
-
-        // Limpiar formulario
-        setFormData({
-          nombre: '',
-          sexo: '',
-          telefono: '',
-          sector_profesional: ''
+        // Guardar todos los datos de la respuesta
+        setRegistrationData({
+          ...data,
+          nombre: formData.nombre.trim() // Preservar el nombre para la descarga
         });
+
+        // NO limpiar formulario inmediatamente para permitir descarga
+        // Se limpiará después de descargar la imagen o manualmente
+
       } else {
         // Error del servidor
         setRegistrationResult({
@@ -164,15 +164,70 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     }
   };
 
-  const downloadImage = () => {
-    if (imageUrl) {
-      // Crear un enlace temporal para descargar la imagen
+  const downloadImage = async () => {
+    if (!registrationData || !registrationData.numero_asignado || !registrationData.nombre) {
+      console.error('Datos de registro incompletos');
+      setRegistrationResult({
+        type: 'error',
+        message: 'Error: No se pueden generar los datos para la imagen'
+      });
+      return;
+    }
+
+    try {
+      console.log('Descargando imagen para:', registrationData); // Debug
+      
+      // Construir URL correcta con parámetros
+      const imageUrl = `/api/imagen/${registrationData.numero_asignado}?nombre=${encodeURIComponent(registrationData.nombre)}`;
+      console.log('URL de imagen:', imageUrl); // Debug
+
+      // Hacer fetch para obtener la imagen
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al generar imagen');
+      }
+
+      // Obtener la imagen como blob
+      const blob = await response.blob();
+      
+      if (blob.size === 0) {
+        throw new Error('La imagen generada está vacía');
+      }
+
+      // Crear URL temporal para el blob
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Crear enlace de descarga
       const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = `participante_${registrationResult.numero}_${formData.nombre || 'participante'}.png`;
+      link.href = blobUrl;
+      link.download = `participante_${registrationData.numero_asignado}_${registrationData.nombre.replace(/\s+/g, '_')}.png`;
+      
+      // Trigger descarga
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Limpiar URL temporal
+      window.URL.revokeObjectURL(blobUrl);
+
+      // Ahora sí limpiar el formulario después de descarga exitosa
+      setFormData({
+        nombre: '',
+        sexo: '',
+        telefono: '',
+        sector_profesional: ''
+      });
+
+      console.log('Descarga completada exitosamente');
+      
+    } catch (error) {
+      console.error('Error al descargar imagen:', error);
+      setRegistrationResult({
+        type: 'error',
+        message: `Error al descargar imagen: ${error.message}`
+      });
     }
   };
 
@@ -182,6 +237,17 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     } else if (setActiveSection) {
       setActiveSection('registro');
     }
+  };
+
+  const clearForm = () => {
+    setFormData({
+      nombre: '',
+      sexo: '',
+      telefono: '',
+      sector_profesional: ''
+    });
+    setRegistrationResult(null);
+    setRegistrationData(null);
   };
 
   return (
@@ -217,19 +283,27 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 <p className="font-medium">{registrationResult.message}</p>
               </div>
               
-              {registrationResult.type === 'success' && imageUrl && (
+              {registrationResult.type === 'success' && registrationData && (
                 <div className="mt-4 p-4 bg-blue-950/50 rounded-xl">
                   <p className="text-sm text-gray-300 mb-3">Su número de participante:</p>
                   <div className="text-2xl font-black text-blue-400 mb-4 text-center">
                     {registrationResult.numero}
                   </div>
-                  <button
-                    onClick={downloadImage}
-                    className="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
-                  >
-                    <Download className="w-5 h-5 mr-2" />
-                    Descargar Número de Participante
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={downloadImage}
+                      className="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Descargar Número
+                    </button>
+                    <button
+                      onClick={clearForm}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300"
+                    >
+                      Nuevo Registro
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
