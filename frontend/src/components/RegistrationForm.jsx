@@ -1,20 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Phone, User, Briefcase, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-
-const SECTORES_SALUD = [
-  "Medicina General",
-  "Enfermería", 
-  "Odontología",
-  "Fisioterapia",
-  "Psicología",
-  "Nutrición",
-  "Farmacia",
-  "Medicina Especializada",
-  "Técnico en Salud",
-  "Administración en Salud",
-  "Otro sector de salud",
-  "Área diferente a la salud"
-];
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
   const [formData, setFormData] = useState({
@@ -23,9 +8,58 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     telefono: '',
     sector_profesional: ''
   });
+  const [sectoresSalud, setSectoresSalud] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [registrationResult, setRegistrationResult] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
+
+  // Cargar sectores desde la API
+  useEffect(() => {
+    const fetchSectores = async () => {
+      try {
+        const response = await fetch('/api/sectores');
+        if (response.ok) {
+          const data = await response.json();
+          setSectoresSalud(data.sectores);
+        } else {
+          // Fallback si no se pueden cargar desde la API
+          setSectoresSalud([
+            "Medicina General",
+            "Enfermería", 
+            "Odontología",
+            "Fisioterapia",
+            "Psicología",
+            "Nutrición",
+            "Farmacia",
+            "Medicina Especializada",
+            "Técnico en Salud",
+            "Administración en Salud",
+            "Otro sector de salud",
+            "Área diferente a la salud"
+          ]);
+        }
+      } catch (error) {
+        console.error('Error al cargar sectores:', error);
+        // Fallback en caso de error
+        setSectoresSalud([
+          "Medicina General",
+          "Enfermería", 
+          "Odontología",
+          "Fisioterapia",
+          "Psicología",
+          "Nutrición",
+          "Farmacia",
+          "Medicina Especializada",
+          "Técnico en Salud",
+          "Administración en Salud",
+          "Otro sector de salud",
+          "Área diferente a la salud"
+        ]);
+      }
+    };
+
+    fetchSectores();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -73,42 +107,57 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
     setIsLoading(true);
     setRegistrationResult(null);
+    setImageUrl(null);
 
     try {
-      // Simulación de registro exitoso para demo
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const numeroAsignado = Math.floor(Math.random() * 2000) + 1;
-      
-      setRegistrationResult({
-        type: 'success',
-        message: '¡Registro exitoso! Su número de participante ha sido asignado.',
-        numero: numeroAsignado.toString().padStart(4, '0')
+      // LLAMADA REAL A LA API
+      const response = await fetch('/api/registro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formData.nombre.trim(),
+          sexo: formData.sexo,
+          telefono: formData.telefono.trim(),
+          sector_profesional: formData.sector_profesional
+        })
       });
-      
-      // Simular imagen disponible
-      setImageUrl(`data:image/svg+xml;base64,${btoa(`
-        <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-          <rect width="300" height="200" fill="#1e40af"/>
-          <text x="150" y="60" text-anchor="middle" fill="white" font-size="16" font-weight="bold">XXXII Carrera del Médico</text>
-          <text x="150" y="90" text-anchor="middle" fill="white" font-size="14">Participante</text>
-          <text x="150" y="130" text-anchor="middle" fill="#fbbf24" font-size="36" font-weight="bold">${numeroAsignado.toString().padStart(4, '0')}</text>
-          <text x="150" y="160" text-anchor="middle" fill="white" font-size="12">${formData.nombre}</text>
-          <text x="150" y="180" text-anchor="middle" fill="white" font-size="10">18 de Octubre, 2025</text>
-        </svg>
-      `)}`);
 
-      // Limpiar formulario
-      setFormData({
-        nombre: '',
-        sexo: '',
-        telefono: '',
-        sector_profesional: ''
-      });
+      const data = await response.json();
+
+      if (response.ok) {
+        // Registro exitoso
+        setRegistrationResult({
+          type: 'success',
+          message: data.message,
+          numero: data.numero_asignado
+        });
+        
+        // Configurar URL de descarga de imagen
+        if (data.imagen_url) {
+          setImageUrl(data.imagen_url);
+        }
+
+        // Limpiar formulario
+        setFormData({
+          nombre: '',
+          sexo: '',
+          telefono: '',
+          sector_profesional: ''
+        });
+      } else {
+        // Error del servidor
+        setRegistrationResult({
+          type: 'error',
+          message: data.detail || 'Error en el registro'
+        });
+      }
     } catch (error) {
+      console.error('Error de conexión:', error);
       setRegistrationResult({
         type: 'error',
-        message: 'Error de conexión. Intente nuevamente.'
+        message: 'Error de conexión. Verifique su conexión a internet e intente nuevamente.'
       });
     } finally {
       setIsLoading(false);
@@ -117,9 +166,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
   const downloadImage = () => {
     if (imageUrl) {
+      // Crear un enlace temporal para descargar la imagen
       const link = document.createElement('a');
       link.href = imageUrl;
-      link.download = `participante_${registrationResult.numero}.png`;
+      link.download = `participante_${registrationResult.numero}_${formData.nombre || 'participante'}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -200,6 +250,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
                 placeholder="Ingrese su nombre completo"
                 disabled={isLoading}
+                required
               />
             </div>
 
@@ -214,6 +265,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 onChange={handleChange}
                 className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
                 disabled={isLoading}
+                required
               >
                 <option value="">Seleccionar</option>
                 <option value="Masculino">Masculino</option>
@@ -234,6 +286,8 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
                 placeholder="Ejemplo: 9611234567"
                 disabled={isLoading}
+                minLength="10"
+                required
               />
             </div>
 
@@ -248,9 +302,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 onChange={handleChange}
                 className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
                 disabled={isLoading}
+                required
               >
                 <option value="">Seleccionar</option>
-                {SECTORES_SALUD.map((sector, index) => (
+                {sectoresSalud.map((sector, index) => (
                   <option key={index} value={sector}>{sector}</option>
                 ))}
               </select>

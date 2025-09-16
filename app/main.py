@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import StreamingResponse
 import sqlite3
 import os
 from datetime import datetime
@@ -9,13 +10,30 @@ from pydantic import BaseModel
 from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 import tempfile
-
+from io import BytesIO
 import pathlib
+
 # Configuración
 MAX_REGISTROS = 2000
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
 BASE_IMG_PATH = 'app/carrera_medico_template.png'
+
+# Sectores profesionales (igual que en Gradio)
+SECTORES_SALUD = [
+    "Medicina General",
+    "Enfermería", 
+    "Odontología",
+    "Fisioterapia",
+    "Psicología",
+    "Nutrición",
+    "Farmacia",
+    "Medicina Especializada",
+    "Técnico en Salud",
+    "Administración en Salud",
+    "Otro sector de salud",
+    "Área diferente a la salud"
+]
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
 
@@ -28,7 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
- # Eliminado almacenamiento de imágenes generadas
+# Servir archivos estáticos del frontend
 app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
 # Modelos Pydantic
@@ -50,7 +68,6 @@ def conectar_bd():
 
 def crear_tablas():
     # Asegurar que el directorio 'data' existe
-    import os
     data_dir = os.path.dirname(DB_NAME)
     if data_dir and not os.path.exists(data_dir):
         os.makedirs(data_dir, exist_ok=True)
@@ -89,35 +106,62 @@ def verificar_limite_registros():
         con.close()
 
 def generar_numero_participante(participante_id: int, nombre: str):
-    """Genera la imagen con el número del participante"""
-    from io import BytesIO
+    """Genera la imagen con el número del participante - CORREGIDA"""
     try:
-        # Usar la imagen base del repo
-        img = Image.open(BASE_IMG_PATH)
+        # Si existe imagen base personalizada, usarla; si no, crear una imagen simple
+        if os.path.exists(BASE_IMG_PATH):
+            img = Image.open(BASE_IMG_PATH)
+        else:
+            # Crear imagen básica si no existe la plantilla (igual que en Gradio)
+            img = Image.new('RGB', (800, 600), color='white')
+            draw = ImageDraw.Draw(img)
+            
+            # Dibujar borde
+            draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
+            
+            # Título
+            try:
+                font_titulo = ImageFont.truetype('arial.ttf', 48)
+            except:
+                font_titulo = ImageFont.load_default()
+            
+            draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, 
+                     fill='black', anchor='mt')
+        
+        # Preparar el dibujo
         draw = ImageDraw.Draw(img)
+        
         # Configurar fuentes
         try:
             font_numero = ImageFont.truetype('arial.ttf', 120)
             font_nombre = ImageFont.truetype('arial.ttf', 36)
-        except Exception:
+        except:
             font_numero = ImageFont.load_default()
             font_nombre = ImageFont.load_default()
+        
         # Formatear número con ceros a la izquierda
         numero_formateado = f"{participante_id:04d}"
+        
         # Posición centrada para el número
         img_width, img_height = img.size
+        
         # Dibujar número del participante (más grande)
-        draw.text((img_width//2, img_height//2 - 60), numero_formateado, font=font_numero, fill='black', anchor='mm')
-        # Dibujar nombre (debajo del número)
-        draw.text((img_width//2, img_height//2 + 40), nombre, font=font_nombre, fill='blue', anchor='mm')
+        draw.text((img_width//2, img_height//2 - 60), numero_formateado, 
+                 font=font_numero, fill='black', anchor='mm')
+        
+        # Dibujar nombre (debajo del número) - CORREGIDO: color blanco como en Gradio
+        draw.text((img_width//2, img_height//2 + 40), nombre, 
+                 font=font_nombre, fill='white', anchor='mm')
+        
         # Guardar imagen en memoria
         img_bytes = BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes.seek(0)
         return img_bytes
+        
     except Exception as e:
-        import traceback
         print(f"Error al generar imagen: {e}")
+        import traceback
         traceback.print_exc()
         return None
 
@@ -135,23 +179,31 @@ async def get_status():
         "puede_registrar": puede_registrar
     }
 
+@app.get("/api/sectores")
+async def get_sectores():
+    """Endpoint para obtener los sectores profesionales disponibles"""
+    return {"sectores": SECTORES_SALUD}
+
 @app.post("/api/registro", response_model=ParticipanteResponse)
 async def registrar_participante(participante: ParticipanteCreate):
-    # Validaciones básicas
+    # Validaciones básicas (iguales a Gradio)
     if not all([participante.nombre.strip(), participante.sexo, 
                 participante.telefono.strip(), participante.sector_profesional]):
-        raise HTTPException(status_code=400, detail="Todos los campos son obligatorios")
+        raise HTTPException(status_code=400, detail="Todos los campos son obligatorios.")
     
     if participante.sexo not in ["Masculino", "Femenino"]:
-        raise HTTPException(status_code=400, detail="Sexo debe ser 'Masculino' o 'Femenino'")
+        raise HTTPException(status_code=400, detail="Debe seleccionar un sexo válido.")
+    
+    if participante.sector_profesional not in SECTORES_SALUD:
+        raise HTTPException(status_code=400, detail="Debe seleccionar un sector profesional válido.")
     
     if len(participante.telefono.strip()) < 10:
-        raise HTTPException(status_code=400, detail="El número de teléfono debe tener al menos 10 dígitos")
+        raise HTTPException(status_code=400, detail="El número de teléfono debe tener al menos 10 dígitos.")
     
     # Verificar límite de registros
     puede_registrar, total_actual = verificar_limite_registros()
     if not puede_registrar:
-        raise HTTPException(status_code=400, detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros")
+        raise HTTPException(status_code=400, detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
     
     con = conectar_bd()
     cursor = con.cursor()
@@ -166,14 +218,14 @@ async def registrar_participante(participante: ParticipanteCreate):
             raise HTTPException(status_code=400, 
                               detail=f"Ya existe un registro con este número de teléfono: {existing[0]}")
         
-        # Obtener el próximo ID disponible
+        # Obtener el próximo ID disponible (igual que en Gradio)
         cursor.execute("SELECT MAX(id) FROM participantes")
         max_id = cursor.fetchone()[0]
         next_id = 1 if max_id is None else max_id + 1
         
         if next_id > MAX_REGISTROS:
             raise HTTPException(status_code=400, 
-                              detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros")
+                              detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
         
         # Crear número formateado
         numero_asignado = f"{next_id:04d}"
@@ -187,8 +239,9 @@ async def registrar_participante(participante: ParticipanteCreate):
         
         con.commit()
         
-        # La imagen se genera bajo demanda, no se almacena ni se guarda ruta
+        # La imagen se genera bajo demanda
         imagen_url = f"/api/imagen/{numero_asignado}?nombre={participante.nombre.strip()}"
+        
         return ParticipanteResponse(
             id=next_id,
             numero_asignado=numero_asignado,
@@ -206,27 +259,52 @@ async def registrar_participante(participante: ParticipanteCreate):
         con.close()
 
 @app.get("/api/imagen/{numero_participante}")
-async def descargar_imagen(numero_participante: str):
-    """Descarga la imagen del número de participante"""
+async def descargar_imagen(numero_participante: str, request: Request):
+    """Descarga la imagen del número de participante - CORREGIDA"""
     
-    from fastapi import Query
-    from starlette.responses import StreamingResponse
-    nombre = Query(None)
-    # Si el nombre no viene por query, error
-    import inspect
     # Obtener el nombre desde la query params
-    frame = inspect.currentframe()
-    request = frame.f_back.f_locals.get('request', None)
-    if request:
-        nombre = request.query_params.get('nombre', None)
+    nombre = request.query_params.get('nombre', None)
+    
     if not nombre:
         raise HTTPException(status_code=400, detail="Nombre requerido para generar la imagen")
+    
+    try:
+        # Validar que el número sea válido
+        participant_id = int(numero_participante)
+        if participant_id <= 0 or participant_id > MAX_REGISTROS:
+            raise HTTPException(status_code=400, detail="Número de participante inválido")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Número de participante debe ser numérico")
+    
+    # Verificar que el participante existe en la BD
+    con = conectar_bd()
+    cursor = con.cursor()
+    
+    try:
+        cursor.execute("SELECT nombre FROM participantes WHERE numero_asignado = ?", (numero_participante,))
+        participante = cursor.fetchone()
+        
+        if not participante:
+            raise HTTPException(status_code=404, detail="Participante no encontrado")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Error al verificar participante")
+    finally:
+        con.close()
+    
     # Generar imagen en memoria
-    img_bytes = generar_numero_participante(int(numero_participante), nombre)
+    img_bytes = generar_numero_participante(participant_id, nombre)
+    
     if not img_bytes:
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
+    
     filename = f"participante_{numero_participante}_{nombre.replace(' ', '_')}.png"
-    return StreamingResponse(img_bytes, media_type='image/png', headers={"Content-Disposition": f"attachment; filename={filename}"})
+    
+    return StreamingResponse(
+        img_bytes, 
+        media_type='image/png', 
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.get("/api/participantes")
 async def listar_participantes(limit: int = 100, offset: int = 0):
