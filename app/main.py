@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
  # Eliminado almacenamiento de imágenes generadas
-app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="frontend")
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
 # Modelos Pydantic
 class ParticipanteCreate(BaseModel):
