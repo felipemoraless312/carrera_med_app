@@ -1,11 +1,9 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
-  // En desarrollo, usar localhost
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://52.14.168.116:8000';
   }
   
-  // En producción, usar la IP del servidor backend
   return 'http://52.14.168.116:8000';
 };
 
@@ -223,31 +221,5 @@ export const setApiUrl = (url) => {
   API_CONFIG.BASE_URL = url;
 };
 
-// Hook personalizado para verificar conectividad
-// NOTA: Este hook debe ser movido a un archivo separado que importe React
-// Por ahora lo comentamos para evitar errores
-/*
-export const useApiHealth = () => {
-  const [isHealthy, setIsHealthy] = React.useState(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        await apiService.healthCheck();
-        setIsHealthy(true);
-      } catch (error) {
-        setIsHealthy(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkHealth();
-  }, []);
-
-  return { isHealthy, isLoading };
-};
-*/
 
 export default apiService;

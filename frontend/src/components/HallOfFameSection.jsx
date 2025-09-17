@@ -75,8 +75,10 @@ const HallOfFameSection = () => {
             Salón de la Fama
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Reconocemos a los profesionales de la salud que han destacado 
+            Reconocemos a todas las personas que han destacado 
             por su dedicación tanto en el área médica como en el deporte
+            <div className="text-sm text-gray-400 mt-2">(Edición 2025)
+          </div>
           </p>
         </div>
         

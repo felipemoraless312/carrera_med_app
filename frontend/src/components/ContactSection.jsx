@@ -83,7 +83,6 @@ const ContactSection = () => {
 
   const socialLinks = [
     { icon: Facebook, href: '#', color: 'from-blue-600 to-blue-700', hoverColor: 'hover:shadow-blue-500/50' },
-    { icon: Instagram, href: '#', color: 'from-pink-500 to-rose-600', hoverColor: 'hover:shadow-pink-500/50' },
   ];
 
   return (

@@ -7,14 +7,15 @@ const Navbar = ({ activeSection, setActiveSection }) => {
   const [logoError, setLogoError] = useState(false);
   
   const navItems = [
-    { id: 'inicio', label: 'Inicio', color: 'hover:text-blue-800' },
-    { id: 'informacion', label: 'Información', color: 'hover:text-blue-700' },
-    { id: 'registro', label: 'Registro', color: 'hover:text-blue-600' },
-    { id: 'salon-fama', label: 'Salón de la Fama', color: 'hover:text-gray-400' },
-    { id: 'trayectoria', label: 'Historia', color: 'hover:text-gray-400' },
-    { id: 'patrocinadores', label: 'Patrocinadores', color: 'hover:text-gray-400' },
-    { id: 'contacto', label: 'Contacto', color: 'hover:text-red-600' }
-  ];
+  { id: 'inicio', label: 'Inicio', color: 'hover:text-blue-800' },
+  { id: 'informacion', label: 'Información', color: 'hover:text-blue-700' },
+  { id: 'registro', label: 'Registro', color: 'hover:text-blue-600' },
+  { id: 'salon-fama', label: 'Salón de la Fama', color: 'hover:text-gray-400' },
+  { id: 'trayectoria', label: 'Historia', color: 'hover:text-gray-400' },
+  { id: 'patrocinadores', label: 'Patrocinadores', color: 'hover:text-gray-400' },
+  { id: 'admin', label: 'Participantes', color: 'hover:text-purple-400' },
+  { id: 'contacto', label: 'Contacto', color: 'hover:text-red-600' }
+];
 
   useEffect(() => {
     const handleScroll = () => {

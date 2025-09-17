@@ -1,32 +1,42 @@
 import React from 'react';
-import { Heart, Phone, Mail, MapPin, Facebook, Instagram, Twitter, Calendar } from 'lucide-react';
+import { Heart, Phone, MapPin, Facebook, Calendar } from 'lucide-react';
 
-const Footer = () => {
+// Función de scroll suave
+const scrollToSection = (sectionId, setActiveSection) => {
+  setActiveSection(sectionId);
+  const sectionElement = document.getElementById(sectionId);
+  if (sectionElement) {
+    sectionElement.scrollIntoView({ behavior: 'smooth' });
+  }
+};
+
+const Footer = ({ setActiveSection }) => {
   const quickLinks = [
-    { name: 'Registro', id: 'registro' },
-    { name: 'Información', id: 'informacion' },
-    { name: 'Resultados', id: 'salon-fama' },
-    { name: 'Historia', id: 'trayectoria' }
+    { name: 'Inicio', id: 'inicio' }
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: '#', color: 'hover:text-blue-500' },
-    { icon: Instagram, href: '#', color: 'hover:text-pink-500' },
+    { icon: Facebook, href: '#', color: 'hover:text-blue-500' }
   ];
 
   const contactInfo = [
-    { icon: Phone, text: '+52 961 462 3839' },
-    { icon: Mail, text: 'infocarreradelmedico@gmail.com' },
+    { icon: Phone, text: '61 3 66 66' },
     { icon: MapPin, text: 'Tuxtla Gutiérrez, Chiapas' }
   ];
 
+  const handleLinkClick = (sectionId) => {
+    if (setActiveSection) {
+      scrollToSection(sectionId, setActiveSection);
+    }
+  };
+
   return (
     <footer className="bg-blue-950 text-gray-200 relative overflow-hidden">
-      {/* Fondo decorativo removido para mayor sobriedad */}
       <div className="relative z-10">
         {/* Contenido principal */}
         <div className="container mx-auto px-4 py-12">
           <div className="grid md:grid-cols-4 gap-8">
+            
             {/* Logo y descripción */}
             <div className="md:col-span-2">
               <div className="flex items-center space-x-3 mb-6">
@@ -75,13 +85,13 @@ const Footer = () => {
               <ul className="space-y-3">
                 {quickLinks.map((link, index) => (
                   <li key={index}>
-                    <a 
-                      href={`#${link.id}`}
-                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 flex items-center group"
+                    <button 
+                      onClick={() => handleLinkClick(link.id)}
+                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 flex items-center group cursor-pointer"
                     >
                       <span className="w-2 h-2 bg-blue-700 rounded-full mr-3 group-hover:bg-blue-400 transition-colors"></span>
                       {link.name}
-                    </a>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -118,7 +128,7 @@ const Footer = () => {
         </div>
 
         {/* Línea divisoria */}
-  <div className="border-t border-blue-900"></div>
+        <div className="border-t border-blue-900"></div>
 
         {/* Copyright */}
         <div className="container mx-auto px-4 py-6">

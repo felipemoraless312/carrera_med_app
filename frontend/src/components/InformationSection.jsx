@@ -24,10 +24,9 @@ const InformationSection = () => {
   ];
 
   const schedule = [
-    { time: '6:00 AM', activity: 'Apertura de registro', icon: Calendar, color: 'text-blue-500' },
-    { time: '7:00 AM', activity: 'Calentamiento grupal', icon: Users, color: 'text-green-500' },
-    { time: '8:00 AM', activity: 'Salida oficial', icon: Route, color: 'text-purple-500' },
-    { time: '11:00 AM', activity: 'Premiación', icon: Trophy, color: 'text-yellow-500' }
+    { time: '6:00 AM', activity: 'LLegada al punto de encuentro', icon: Calendar, color: 'text-blue-500' },
+    { time: '7:00 AM', activity: 'Salida oficial de la carrera', icon: Users, color: 'text-green-500' },
+    { time: '10:00 AM', activity: 'Premiación', icon: Trophy, color: 'text-yellow-500' }
   ];
 
     return (
@@ -155,10 +154,6 @@ const InformationSection = () => {
                     <div className="text-3xl font-black text-blue-400 mb-6 group-hover:animate-pulse">
                       {category.price}
                     </div>
-                    {/* Botón */}
-                    <button className="w-full py-4 px-6 bg-blue-700 text-gray-100 font-black rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1">
-                      Seleccionar
-                    </button>
                   </div>
                 </div>
               );

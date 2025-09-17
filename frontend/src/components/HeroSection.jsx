@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
   const [timeLeft, setTimeLeft] = useState({
@@ -36,6 +36,33 @@ const HeroSection = ({ setActiveSection }) => {
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
 
+  // Imágenes del carrusel
+  const images = [
+    '/images/6.jpg',
+    '/images/2.jpg', 
+    '/images/7.jpg',
+    '/images/1.jpg',
+    '/images/3.jpg',
+  ];
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 4000); // Cambia cada 4 segundos
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Fondo animado con gradientes médicos */}
@@ -44,14 +71,15 @@ const HeroSection = ({ setActiveSection }) => {
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-800/40 to-blue-400/30"></div>
         <div className="absolute inset-0 bg-black/30"></div>
       </div>
+
       {/* Contenido principal */}
       <div className="relative z-10 flex flex-col justify-center min-h-screen text-white">
-        <div className="container mx-auto px-4 py-20 text-center">
+        <div className="container mx-auto px-4 py-20">
           {/* Título con efectos */}
-          <div className="mb-8 animate-fade-in-up">
+          <div className="text-center mb-8 animate-fade-in-up">
             <div className="flex items-center justify-center mb-4">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight bg-gradient-to-r from-white via-blue-200 to-blue-400 bg-clip-text text-transparent">
-                XXXII Carrera anual "Día del Médico"
+                XXXII Carrera Anual "Día Del Médico"
               </h1>
             </div>
             <span className="block text-3xl md:text-5xl lg:text-6xl font-bold text-blue-200">
@@ -62,53 +90,110 @@ const HeroSection = ({ setActiveSection }) => {
             </p>
           </div>
           
-          {/* Información del evento con efectos */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-12 text-lg">
-            <div className="flex items-center gap-2 bg-blue-900/60 px-6 py-3 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-all duration-300 transform hover:scale-105 shadow-lg">
-              <Calendar className="w-5 h-5 text-blue-200 animate-pulse" />
-              <span className="font-semibold text-blue-100">18 de Octubre, 2025</span>
-            </div>
-            <a
-              href="https://share.google/kiqf73sfJqLAGAsp3"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-blue-900/60 px-6 py-3 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-all duration-300 transform hover:scale-105 shadow-lg cursor-pointer"
-            >
-              <MapPin className="w-5 h-5 text-blue-200 animate-pulse" />
-              <span className="font-semibold text-blue-100 underline">{location}</span>
-            </a>
-          </div>
+          {/* Grid con información del evento e imágenes */}
+          <div className="grid lg:grid-cols-2 gap-8 mb-12 max-w-6xl mx-auto">
+            
+            {/* Columna izquierda - Información del evento */}
+            <div className="space-y-8">
+              {/* Información del evento */}
+              <div className="flex flex-col gap-4 text-lg">
+                <div className="flex items-center gap-2 bg-blue-900/60 px-6 py-3 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                  <Calendar className="w-5 h-5 text-blue-200 animate-pulse" />
+                  <span className="font-semibold text-blue-100">18 de Octubre, 2025</span>
+                </div>
+                <a
+                  href="https://share.google/kiqf73sfJqLAGAsp3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-blue-900/60 px-6 py-3 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-all duration-300 transform hover:scale-105 shadow-lg cursor-pointer"
+                >
+                  <MapPin className="w-5 h-5 text-blue-200 animate-pulse" />
+                  <span className="font-semibold text-blue-100 underline">{location}</span>
+                </a>
+              </div>
 
-          {/* Contador Regresivo con efectos */}
-          <div className="max-w-4xl mx-auto mb-12">
-            <div className="bg-blue-900/70 backdrop-blur-xl rounded-3xl p-8 border border-blue-400/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:bg-blue-900/90">
-              <h3 className="text-2xl md:text-3xl font-bold mb-8 text-blue-100 flex items-center justify-center">
-                Cuenta Regresiva 
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {[
-                  { value: timeLeft.days, label: 'Días', color: 'from-blue-400 to-blue-600' },
-                  { value: timeLeft.hours, label: 'Horas', color: 'from-blue-300 to-blue-500' },
-                  { value: timeLeft.minutes, label: 'Minutos', color: 'from-blue-200 to-blue-400' },
-                  { value: timeLeft.seconds, label: 'Segundos', color: 'from-yellow-200 to-yellow-400' }
-                ].map((item, index) => (
-                  <div key={index} className="group">
-                    <div className={`bg-gradient-to-br ${item.color} backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-blue-400/30 shadow-xl transition-all duration-300`}>
-                      <div className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2">
-                        {String(item.value || 0).padStart(2, '0')}
-                      </div>
-                      <div className="text-sm md:text-base text-white/90 font-bold uppercase tracking-wider">
-                        {item.label}
+              {/* Contador Regresivo */}
+              <div className="bg-blue-900/70 backdrop-blur-xl rounded-3xl p-6 border border-blue-400/20 shadow-2xl">
+                <h3 className="text-xl md:text-2xl font-bold mb-6 text-blue-100 text-center">
+                  Cuenta Regresiva 
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: timeLeft.days, label: 'Días', color: 'from-blue-400 to-blue-600' },
+                    { value: timeLeft.hours, label: 'Horas', color: 'from-blue-300 to-blue-500' },
+                    { value: timeLeft.minutes, label: 'Minutos', color: 'from-blue-200 to-blue-400' },
+                    { value: timeLeft.seconds, label: 'Segundos', color: 'from-yellow-200 to-yellow-400' }
+                  ].map((item, index) => (
+                    <div key={index} className="group">
+                      <div className={`bg-gradient-to-br ${item.color} backdrop-blur-sm rounded-xl p-3 border border-blue-400/30 shadow-xl transition-all duration-300`}>
+                        <div className="text-2xl md:text-3xl font-black text-white mb-1 text-center">
+                          {String(item.value || 0).padStart(2, '0')}
+                        </div>
+                        <div className="text-xs text-white/90 font-bold uppercase tracking-wider text-center">
+                          {item.label}
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Columna derecha - Carrusel de imágenes */}
+            <div className="relative">
+              <div className="bg-blue-900/70 backdrop-blur-xl rounded-3xl p-6 border border-blue-400/20 shadow-2xl">
+                <h3 className="text-xl md:text-2xl font-bold mb-6 text-blue-100 text-center">
+                  Momentos Memorables
+                </h3>
+                
+                <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl">
+                  {images.map((image, index) => (
+                    <img
+                      key={index}
+                      src={image}
+                      alt={`Carrera imagen ${index + 1}`}
+                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                        index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ))}
+                  
+                  {/* Controles del carrusel */}
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 hover:scale-110"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 hover:scale-110"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Indicadores de imagen */}
+                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                    {images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                          index === currentImageIndex ? 'bg-white' : 'bg-white/50 hover:bg-white/80'
+                        }`}
+                      />
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Botón de registro con efectos */}
-          <div className="space-y-4">
+          {/* Botón de registro centrado */}
+          <div className="text-center space-y-4">
             <button
               type="button"
               onClick={() => setActiveSection && setActiveSection('registro')}
@@ -124,17 +209,18 @@ const HeroSection = ({ setActiveSection }) => {
         </div>
       </div>
       
-      {/* Decoración inferior con animación */}
-  <div className="absolute bottom-0 left-0 right-0">
-        <svg viewBox="0 0 1440 120" className="w-full h-20" style={{ fill: 'url(#hero-footer-gradient)' }}>
+      {/* Decoración inferior con animación - mejorada para desktop */}
+      <div className="absolute bottom-0 left-0 right-0 z-0">
+        <svg viewBox="0 0 1440 120" className="w-full h-16 md:h-24 lg:h-32" style={{ fill: 'url(#hero-footer-gradient)' }} preserveAspectRatio="none">
           <defs>
             <linearGradient id="hero-footer-gradient" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0%" stopColor="#1e3a8a" />
-              <stop offset="50%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#60a5fa" />
+              <stop offset="0%" stopColor="#0d1e7cff" />
+              <stop offset="50%" stopColor="#3929b993" />
+              <stop offset="100%" stopColor="#0d1e7cff" />
             </linearGradient>
           </defs>
-          <path d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,64C960,75,1056,85,1152,80C1248,75,1344,53,1392,42.7L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"></path>
+          {/* Ola más suave y mejor optimizada para desktop */}
+          <path d="M0,40L60,45C120,50,240,60,360,65C480,70,600,70,720,65C840,60,960,50,1080,45C1200,40,1320,40,1380,40L1440,40L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z"></path>
         </svg>
       </div>
 

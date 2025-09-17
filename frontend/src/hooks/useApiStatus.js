@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { apiService } from '../services/api';
 
-// Hook para verificar el estado de la API
 export const useApiStatus = () => {
   const [status, setStatus] = useState({
     isConnected: null,
@@ -46,7 +45,6 @@ export const useApiStatus = () => {
   return { ...status, refetch: checkStatus };
 };
 
-// Componente para mostrar el estado de conexión
 export const ApiStatusIndicator = ({ className = "" }) => {
   const { isConnected, isLoading, error, totalRegistros, puedeRegistrar } = useApiStatus();
 

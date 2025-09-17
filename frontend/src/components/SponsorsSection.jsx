@@ -24,7 +24,7 @@ const SponsorsSection = () => {
 
   const developmentTeam = [
     {  name: 'Ing. Cesar Gomez Aguilera', image: '/images/Aguilera.png' },
-    {  name: 'Ing. Luis Felipe Morales Gutierrez', image: '/images/Felipe.png' }
+    {  name: 'Ing. Luis Felipe Morales Gutierrez', image: '/images/feli.png' }
   ];
 
   return (
