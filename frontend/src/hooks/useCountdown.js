@@ -45,15 +45,12 @@ export const useCountdown = (targetDate) => {
       }
     };
 
-    // Calcular inmediatamente
     setTimeLeft(calculateTimeLeft());
 
-    // Configurar intervalo para actualizar cada segundo
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    // Limpiar intervalo al desmontar el componente
     return () => clearInterval(timer);
   }, [targetDate]);
 

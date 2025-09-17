@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Phone, User, Briefcase, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { apiService, downloadUtils } from '../services/api';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
   const [formData, setFormData] = useState({
@@ -17,29 +18,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   useEffect(() => {
     const fetchSectores = async () => {
       try {
-        const response = await fetch('/api/sectores');
-        if (response.ok) {
-          const data = await response.json();
-          setSectoresSalud(data.sectores);
-        } else {
-          // Fallback si no se pueden cargar desde la API
-          setSectoresSalud([
-            "Medicina General",
-            "Enfermería", 
-            "Odontología",
-            "Fisioterapia",
-            "Psicología",
-            "Nutrición",
-            "Farmacia",
-            "Medicina Especializada",
-            "Técnico en Salud",
-            "Administración en Salud",
-            "Otro sector de salud",
-            "Área diferente a la salud"
-          ]);
-        }
+        const data = await apiService.getSectores();
+        setSectoresSalud(data.sectores);
       } catch (error) {
         console.error('Error al cargar sectores:', error);
+        // Fallback si no se pueden cargar desde la API
         setSectoresSalud([
           "Medicina General",
           "Enfermería", 
@@ -71,39 +54,6 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validaciones básicas
-    if (!formData.nombre.trim()) {
-      setRegistrationResult({
-        type: 'error',
-        message: 'El nombre es obligatorio'
-      });
-      return;
-    }
-
-    if (!formData.sexo) {
-      setRegistrationResult({
-        type: 'error',
-        message: 'Debe seleccionar un sexo'
-      });
-      return;
-    }
-
-    if (!formData.telefono.trim() || formData.telefono.length < 10) {
-      setRegistrationResult({
-        type: 'error',
-        message: 'El teléfono debe tener al menos 10 dígitos'
-      });
-      return;
-    }
-
-    if (!formData.sector_profesional) {
-      setRegistrationResult({
-        type: 'error',
-        message: 'Debe seleccionar un sector profesional'
-      });
-      return;
-    }
-
     setIsLoading(true);
     setRegistrationResult(null);
     setParticipantData(null);
@@ -111,56 +61,37 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     try {
       console.log('Enviando datos:', formData); // Para debug
 
-      const response = await fetch('/api/registro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nombre: formData.nombre.trim(),
-          sexo: formData.sexo,
-          telefono: formData.telefono.trim(),
-          sector_profesional: formData.sector_profesional
-        })
-      });
-
-      const data = await response.json();
+      // El servicio API ya maneja las validaciones
+      const data = await apiService.registrarParticipante(formData);
       console.log('Respuesta del servidor:', data); // Para debug
 
-      if (response.ok) {
-        // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
-        setRegistrationResult({
-          type: 'success',
-          message: data.message,
-          numero: data.numero_asignado
-        });
-        
-        // Guardar datos del participante para la descarga
-        setParticipantData({
-          numero: data.numero_asignado,
-          nombre: formData.nombre.trim(),
-          imagen_url: data.imagen_url
-        });
+      // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
+      setRegistrationResult({
+        type: 'success',
+        message: data.message,
+        numero: data.numero_asignado
+      });
+      
+      // Guardar datos del participante para la descarga
+      setParticipantData({
+        numero: data.numero_asignado,
+        nombre: formData.nombre.trim(),
+        imagen_url: data.imagen_url
+      });
 
-        // Limpiar formulario SOLO después del registro exitoso
-        setFormData({
-          nombre: '',
-          sexo: '',
-          telefono: '',
-          sector_profesional: ''
-        });
-      } else {
-        // Error del servidor
-        setRegistrationResult({
-          type: 'error',
-          message: data.detail || 'Error en el registro'
-        });
-      }
+      // Limpiar formulario SOLO después del registro exitoso
+      setFormData({
+        nombre: '',
+        sexo: '',
+        telefono: '',
+        sector_profesional: ''
+      });
+
     } catch (error) {
-      console.error('Error de conexión:', error);
+      console.error('Error en registro:', error);
       setRegistrationResult({
         type: 'error',
-        message: 'Error de conexión. Verifique su conexión a internet e intente nuevamente.'
+        message: error.message
       });
     } finally {
       setIsLoading(false);
@@ -176,45 +107,14 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     try {
       console.log('Descargando imagen para:', participantData); // Para debug
       
-      // Construir URL de descarga
-      const imageUrl = `/api/imagen/${participantData.numero}?nombre=${encodeURIComponent(participantData.nombre)}`;
-      console.log('URL de imagen:', imageUrl); // Para debug
-
-      // Hacer fetch de la imagen
-      const response = await fetch(imageUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-
-      // Convertir a blob
-      const blob = await response.blob();
-      
-      if (blob.size === 0) {
-        throw new Error('Imagen vacía recibida');
-      }
-
-      // Crear URL temporal para el blob
-      const downloadUrl = window.URL.createObjectURL(blob);
-      
-      // Crear enlace de descarga
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `participante_${participantData.numero}_${participantData.nombre.replace(/\s+/g, '_')}.png`;
-      
-      // Agregar al DOM, hacer clic y remover
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Limpiar URL temporal
-      window.URL.revokeObjectURL(downloadUrl);
+      // Usar el servicio API para descargar la imagen
+      await downloadUtils.downloadParticipantImage(participantData.numero, participantData.nombre);
 
     } catch (error) {
       console.error('Error al descargar imagen:', error);
       setRegistrationResult({
         type: 'error',
-        message: 'Error al descargar la imagen. Intente nuevamente.'
+        message: error.message
       });
     }
   };
