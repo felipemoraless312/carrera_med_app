@@ -3,27 +3,33 @@ import React from 'react';
 const HistorySection = () => {
   const milestones = [
     {
-      year: "2017",
+      year: "1988",
       title: "Los Inicios",
-      description: "Nace la idea de celebrar el Día del Médico con una carrera que una a la comunidad médica y a los ciudadanos. La primera edición contó con 300 participantes y se realizó en el parque central.",
+      description: "Nace la idea de celebrar el Día del Médico con una carrera que una a la comunidad médica y a los ciudadanos. La primera edición contó con 300 participantes y se realizó en el parque central de Tuxtla Gutiérrez.",
       color: "blue"
     },
     {
-      year: "2018-2020",
-      title: "Crecimiento",
-      description: "La carrera creció exponencialmente, llegando a 1,500 participantes. Se añadieron nuevas categorías y se establecieron alianzas con hospitales y clínicas de la región.",
+      year: "1989-2010",
+      title: "Consolidación",
+      description: "La carrera se establece como una tradición anual, creciendo año tras año. Se añadieron nuevas categorías y se fortalecieron las alianzas con hospitales y clínicas de Chiapas, llegando a más de 1,000 participantes.",
       color: "green"
     },
     {
-      year: "2021-2023",
-      title: "Adaptación",
-      description: "Durante la pandemia, adaptamos el evento con medidas sanitarias estrictas y formato virtual. Demostramos que ni las adversidades pueden detener nuestro espíritu de celebración.",
+      year: "2011-2019",
+      title: "La Edad de Oro",
+      description: "Durante estos años dorados, la carrera alcanzó su máximo esplendor con más de 2,500 participantes anuales. Se convirtió en el evento deportivo-médico más importante del sureste mexicano.",
       color: "yellow"
     },
     {
-      year: "2024",
-      title: "Récord Histórico",
-      description: "La edición 2024 marcó un hito con más de 2,500 participantes, convirtiéndose en la carrera médica más grande de la región y estableciendo nuevos récords de participación.",
+      year: "2020-2024",
+      title: "El Gran Paréntesis",
+      description: "La pandemia de COVID-19 obligó a suspender el evento por 5 años consecutivos. Fue un período difícil, pero necesario para proteger la salud de nuestra comunidad médica y ciudadanos.",
+      color: "red"
+    },
+    {
+      year: "2025",
+      title: "¡El Gran Regreso!",
+      description: "Después de 5 años de ausencia, regresamos con más fuerza que nunca. La edición 2025 marca el renacimiento de nuestra querida tradición, celebrando 37 años de historia y esperanza renovada.",
       color: "purple"
     }
   ];
@@ -55,12 +61,26 @@ const HistorySection = () => {
           </div>
 
           <div className="bg-blue-900 rounded-lg p-8 mt-12">
-            <h3 className="text-2xl font-bold mb-4 text-center text-blue-400">Nuestro Impacto</h3>
-            <p className="text-blue-200 text-center leading-relaxed">
-              Más que una carrera, somos una celebración de la vida y la salud. Cada paso que damos juntos 
-              fortalece los lazos entre médicos y comunidad, promoviendo estilos de vida saludables y 
-              reconociendo la labor heroica de nuestros profesionales de la salud.
+            <h3 className="text-2xl font-bold mb-4 text-center text-blue-400">37 Años de Tradición</h3>
+            <p className="text-blue-200 text-center leading-relaxed mb-4">
+              Desde 1988, hemos sido más que una carrera: somos una celebración de la vida y la salud. 
+              Cada paso que damos juntos fortalece los lazos entre médicos y comunidad, promoviendo 
+              estilos de vida saludables y reconociendo la labor heroica de nuestros profesionales de la salud.
             </p>
+            <div className="grid md:grid-cols-2 gap-6 mt-6">
+              <div className="bg-blue-950/50 rounded-xl p-4 backdrop-blur-sm">
+                <h4 className="text-lg font-bold text-blue-300 mb-2">1988-2019</h4>
+                <p className="text-blue-200 text-sm">
+                  31 años consecutivos de tradición ininterrumpida
+                </p>
+              </div>
+              <div className="bg-blue-950/50 rounded-xl p-4 backdrop-blur-sm">
+                <h4 className="text-lg font-bold text-blue-300 mb-2">2025</h4>
+                <p className="text-blue-200 text-sm">
+                  El año del regreso triunfal tras 5 años de pausa
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

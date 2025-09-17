@@ -1,6 +1,16 @@
-// Configuración de la API
+// Función para obtener la URL de la API de manera segura
+const getApiUrl = () => {
+  // En desarrollo, usar localhost
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://52.14.168.116:8000';
+  }
+  
+  // En producción, usar la IP del servidor backend
+  return 'http://52.14.168.116:8000';
+};
+
 const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  BASE_URL: getApiUrl(),
   
   DEFAULT_HEADERS: {
     'Content-Type': 'application/json',
@@ -214,6 +224,9 @@ export const setApiUrl = (url) => {
 };
 
 // Hook personalizado para verificar conectividad
+// NOTA: Este hook debe ser movido a un archivo separado que importe React
+// Por ahora lo comentamos para evitar errores
+/*
 export const useApiHealth = () => {
   const [isHealthy, setIsHealthy] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -235,5 +248,6 @@ export const useApiHealth = () => {
 
   return { isHealthy, isLoading };
 };
+*/
 
 export default apiService;
