@@ -1,9 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, Star, Shield, Coffee, Trophy, Heart, Zap, Sparkles } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
 
 const RegistrationSection = ({ setActiveSection }) => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [participantsCount, setParticipantsCount] = useState(1247);
+  
+  // Simular incremento de participantes cada cierto tiempo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setParticipantsCount(prev => {
+        // Incrementar aleatoriamente entre 1-3 participantes
+        const increment = Math.floor(Math.random() * 3) + 1;
+        const newCount = prev + increment;
+        // No superar los 2000 participantes
+        return Math.min(newCount, 2000);
+      });
+    }, 15000); // Cada 15 segundos
+
+    return () => clearInterval(interval);
+  }, []);
   
   const benefits = [
     { 
@@ -168,25 +184,39 @@ const RegistrationSection = ({ setActiveSection }) => {
           </div>
         </div>
         
-        {/* Información adicional con efectos */}
-        <div className="mt-16 grid md:grid-cols-2 gap-8 animate-fade-in delay-1000">
-          {[
-            { number: '2,000', description: 'Participantes esperados', gradient: 'from-blue-500 to-cyan-500' },
-            { number: 'XXXII', description: 'Edición del evento', gradient: 'from-purple-500 to-pink-500' },
-          ].map((stat, index) => (
-            <div 
-              key={index}
-              className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 text-center transform hover:scale-110 transition-all duration-300 hover:bg-white/20 group"
-              style={{ animationDelay: `${index * 0.2}s` }}
-            >
-              <div className={`text-4xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-2 group-hover:animate-pulse`}>
-                {stat.number}
-              </div>
-              <div className="text-white/80 font-bold group-hover:text-white transition-colors duration-300">
-                {stat.description}
-              </div>
+        {/* Contador de participantes inscritos */}
+        <div className="mt-16 flex justify-center animate-fade-in delay-1000">
+          <div className="bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 backdrop-blur-2xl rounded-3xl p-8 border-4 border-green-300/40 text-center transform hover:scale-110 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/30 group max-w-md w-full">
+            <div className="text-6xl md:text-7xl font-black text-white mb-3 group-hover:animate-pulse drop-shadow-2xl">
+              {participantsCount.toLocaleString()}
             </div>
-          ))}
+            <div className="text-white/90 font-black text-xl mb-2 group-hover:text-white transition-colors duration-300">
+              Participantes inscritos
+            </div>
+            <div className="text-white/70 font-bold text-sm group-hover:text-white/90 transition-colors duration-300">
+              ¡Únete a la comunidad médica!
+            </div>
+          </div>
+        </div>
+
+        {/* Información adicional con efectos */}
+        <div className="mt-12 grid md:grid-cols-2 gap-8 animate-fade-in delay-1000">
+          <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 text-center transform hover:scale-110 transition-all duration-300 hover:bg-white/20 group">
+            <div className="text-4xl font-black bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2 group-hover:animate-pulse">
+              2,000
+            </div>
+            <div className="text-white/80 font-bold group-hover:text-white transition-colors duration-300">
+              Participantes esperados
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 text-center transform hover:scale-110 transition-all duration-300 hover:bg-white/20 group">
+            <div className="text-4xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-2 group-hover:animate-pulse">
+              XXXII
+            </div>
+            <div className="text-white/80 font-bold group-hover:text-white transition-colors duration-300">
+              Edición del evento
+            </div>
+          </div>
         </div>
       </div>
       

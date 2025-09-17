@@ -147,3 +147,4 @@ const Navbar = ({ activeSection, setActiveSection }) => {
 
 
 export default Navbar;
+  
