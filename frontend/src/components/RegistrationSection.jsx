@@ -21,33 +21,6 @@ const RegistrationSection = ({ setActiveSection }) => {
     return () => clearInterval(interval);
   }, []);
   
-  const benefits = [
-    { 
-      icon: Star, 
-      text: 'Playera oficial del evento', 
-      color: 'text-yellow-500',
-      gradient: 'from-yellow-400 to-orange-500'
-    },
-    { 
-      icon: Trophy, 
-      text: 'Medalla de participación', 
-      color: 'text-amber-500',
-      gradient: 'from-amber-400 to-yellow-500'
-    },
-    { 
-      icon: Coffee, 
-      text: 'Hidratación en ruta', 
-      color: 'text-blue-500',
-      gradient: 'from-blue-400 to-cyan-500'
-    },
-    { 
-      icon: Shield, 
-      text: 'Seguro de participante', 
-      color: 'text-purple-500',
-      gradient: 'from-purple-400 to-violet-500'
-    }
-  ];
-
   const registrationSteps = [
     {
       step: '1',
@@ -99,48 +72,8 @@ const RegistrationSection = ({ setActiveSection }) => {
           </p>
         </div>
         
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Beneficios con efectos */}
-          <div className="animate-slide-in-left">
-            <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:bg-white/15 hover:scale-105">
-              <h3 className="text-2xl md:text-3xl font-black text-white mb-8 text-center flex items-center justify-center">
-                <Star className="w-6 h-6 mr-3 text-yellow-300 spin-slow" />
-                Tu inscripción incluye: 
-              </h3>
-              <div className="space-y-4">
-                {benefits.map((benefit, index) => {
-                  const IconComponent = benefit.icon;
-                  return (
-                    <div 
-                      key={index} 
-                      className="group flex items-center p-4 bg-white/10 rounded-2xl backdrop-blur-sm hover:bg-white/20 transition-all duration-300 transform hover:scale-105 border border-white/20 hover:border-white/40"
-                      style={{ animationDelay: `${index * 0.2}s` }}
-                    >
-                      <div className={`bg-gradient-to-r ${benefit.gradient} p-3 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                        <IconComponent className="w-6 h-6 text-white group-hover:animate-pulse" />
-                      </div>
-                      <span className="text-white text-lg font-bold group-hover:text-yellow-200 transition-colors duration-300">
-                        {benefit.text}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-8 p-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl text-center transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-yellow-500/50">
-                <div className="flex items-center justify-center mb-2">
-                  <p className="text-white font-black text-xl">
-                    ¡Cupos limitados!
-                  </p>
-                </div>
-                <p className="text-white/90 font-bold">
-                  Solo 2,000 participantes
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Proceso de registro con efectos */}
-          <div className="animate-slide-in-right">
+        <div className="flex justify-center items-center">
+          <div className="animate-slide-in-right w-full max-w-xl mx-auto">
             <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:bg-white/15 hover:scale-105">
               <h3 className="text-2xl md:text-3xl font-black text-white mb-8 text-center">
                 Proceso de Registro
@@ -166,7 +99,6 @@ const RegistrationSection = ({ setActiveSection }) => {
                   </div>
                 ))}
               </div>
-              
               <div className="mt-8 space-y-4">
                 <button
                   onClick={() => setShowRegistrationForm(true)}

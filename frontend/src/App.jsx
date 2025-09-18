@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Importar todos los componentes
 import Navbar from './components/Navbar.jsx';
@@ -11,62 +12,27 @@ import HistorySection from './components/HistorySection.jsx';
 import SponsorsSection from './components/SponsorsSection.jsx';
 import ContactSection from './components/ContactSection.jsx';
 import Footer from './components/Footer.jsx';
+import ScrollToTop from './components/ScrollToTop.jsx';
 
 const App = () => {
-  const [activeSection, setActiveSection] = useState('inicio');
-
-  const renderSection = () => {
-    switch (activeSection) {
-      case 'inicio':
-        return <HeroSection setActiveSection={setActiveSection} />;
-      case 'informacion':
-        return (
-          <div className="pt-20">
-            <InformationSection />
-          </div>
-        );
-      case 'registro':
-        return (
-          <div className="pt-20">
-            <RegistrationSection />
-          </div>
-        );
-      case 'salon-fama':
-        return (
-          <div className="pt-20">
-            <HallOfFameSection />
-          </div>
-        );
-      case 'trayectoria':
-        return (
-          <div className="pt-20">
-            <HistorySection />
-          </div>
-        );
-      case 'patrocinadores':
-        return (
-          <div className="pt-20">
-            <SponsorsSection />
-          </div>
-        );
-      case 'contacto':
-        return (
-          <div className="pt-20">
-            <ContactSection />
-          </div>
-        );
-      default:
-  return <HeroSection setActiveSection={setActiveSection} />;
-    }
-  };
-
   return (
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
-      <Navbar activeSection={activeSection} setActiveSection={setActiveSection} />
-      <main className="flex-1 w-full transition-all duration-500 ease-in-out">
-        {renderSection()}
-      </main>
-      <Footer />
+      <Router>
+        <ScrollToTop />
+        <Navbar />
+        <main className="flex-1 w-full transition-all duration-500 ease-in-out">
+          <Routes>
+            <Route path="/" element={<HeroSection />} />
+            <Route path="/informacion" element={<div className="pt-20"><InformationSection /></div>} />
+            <Route path="/registro" element={<div className="pt-20"><RegistrationSection /></div>} />
+            <Route path="/salon-fama" element={<div className="pt-20"><HallOfFameSection /></div>} />
+            <Route path="/trayectoria" element={<div className="pt-20"><HistorySection /></div>} />
+            <Route path="/patrocinadores" element={<div className="pt-20"><SponsorsSection /></div>} />
+            <Route path="/contacto" element={<div className="pt-20"><ContactSection /></div>} />
+          </Routes>
+        </main>
+        <Footer />
+      </Router>
     </div>
   );
 };

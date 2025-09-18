@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Menu, X, MapPin } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const Navbar = ({ activeSection, setActiveSection }) => {
+const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [logoError, setLogoError] = useState(false);
-  
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const navItems = [
-  { id: 'inicio', label: 'Inicio', color: 'hover:text-blue-800' },
-  { id: 'informacion', label: 'Información', color: 'hover:text-blue-700' },
-  { id: 'registro', label: 'Registro', color: 'hover:text-blue-600' },
-  { id: 'salon-fama', label: 'Salón de la Fama', color: 'hover:text-gray-400' },
-  { id: 'trayectoria', label: 'Historia', color: 'hover:text-gray-400' },
-  { id: 'patrocinadores', label: 'Patrocinadores', color: 'hover:text-gray-400' },
-  { id: 'contacto', label: 'Contacto', color: 'hover:text-red-600' }
-];
+    { id: '/', label: 'Inicio', color: 'hover:text-blue-800' },
+    { id: '/informacion', label: 'Información', color: 'hover:text-blue-700' },
+    { id: '/registro', label: 'Registro', color: 'hover:text-blue-600' },
+    { id: '/salon-fama', label: 'Salón de la Fama', color: 'hover:text-gray-400' },
+    { id: '/trayectoria', label: 'Historia', color: 'hover:text-gray-400' },
+    { id: '/patrocinadores', label: 'Patrocinadores', color: 'hover:text-gray-400' },
+    { id: '/contacto', label: 'Contacto', color: 'hover:text-red-600' }
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -36,7 +38,7 @@ const Navbar = ({ activeSection, setActiveSection }) => {
           {/* Logo mejorado con imagen personalizada */}
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
-            onClick={() => setActiveSection('inicio')}
+            onClick={() => navigate('/')}
           >
             <div className="relative">
               {!logoError ? (
@@ -66,16 +68,16 @@ const Navbar = ({ activeSection, setActiveSection }) => {
             {navItems.map((item, index) => (
               <button
                 key={item.id}
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => navigate(item.id)}
                 className={`relative px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 group overflow-hidden ${
-                  activeSection === item.id
+                  location.pathname === item.id
                     ? 'bg-blue-800 text-white shadow-lg transform scale-105'
                     : `text-blue-100 ${item.color} hover:bg-blue-800 hover:shadow-md`
                 }`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <span className="relative z-10">{item.label}</span>
-                {activeSection === item.id && (
+                {location.pathname === item.id && (
                   <div className="absolute inset-0 bg-blue-800 opacity-20 animate-pulse"></div>
                 )}
                 <div className={`absolute inset-0 bg-blue-900 opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
@@ -109,11 +111,11 @@ const Navbar = ({ activeSection, setActiveSection }) => {
               <button
                 key={item.id}
                 onClick={() => {
-                  setActiveSection(item.id);
+                  navigate(item.id);
                   setIsOpen(false);
                 }}
                 className={`block w-full text-left px-6 py-4 rounded-xl text-sm font-bold transition-all duration-300 transform hover:scale-105 ${
-                  activeSection === item.id
+                  location.pathname === item.id
                     ? 'bg-blue-800 text-white shadow-lg'
                     : `text-blue-100 ${item.color} hover:bg-blue-800 hover:shadow-md`
                 }`}
