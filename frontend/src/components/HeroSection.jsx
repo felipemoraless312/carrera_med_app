@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const useCountdown = (targetDate) => {
   const [timeLeft, setTimeLeft] = useState({
@@ -35,6 +36,7 @@ const HeroSection = ({ setActiveSection }) => {
   const eventDate = '2025-10-18T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
+  const navigate = useNavigate();
 
   // Imágenes del carrusel
   const images = [
@@ -196,7 +198,7 @@ const HeroSection = ({ setActiveSection }) => {
           <div className="text-center space-y-4">
             <button
               type="button"
-              onClick={() => setActiveSection && setActiveSection('registro')}
+              onClick={() => navigate('/registro')}
               className="group relative bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 hover:from-blue-300 hover:via-blue-400 hover:to-blue-600 text-white px-10 py-5 rounded-full text-xl font-black transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-blue-500/50 inline-block text-center"
             >
               <span className="relative z-10">¡Regístrate Ahora!</span>

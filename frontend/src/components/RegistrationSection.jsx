@@ -18,8 +18,7 @@ const RegistrationSection = ({ setActiveSection }) => {
       }
     };
     fetchTotal();
-    // Opcional: refrescar cada cierto tiempo
-    const interval = setInterval(fetchTotal, 30000); // cada 30 segundos
+    const interval = setInterval(fetchTotal, 30000); 
     return () => clearInterval(interval);
   }, []);
 
