@@ -1,10 +1,12 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Para desarrollo local
     return 'http://52.14.168.116:8000';
   }
   
-  return 'http://52.14.168.116:8000';
+  // Para producción - usar el proxy reverso
+  return '/api';
 };
 
 const API_CONFIG = {
