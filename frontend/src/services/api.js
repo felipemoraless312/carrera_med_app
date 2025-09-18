@@ -178,6 +178,17 @@ export const apiService = {
       console.error('Error al obtener participantes:', error);
       throw new Error('Error al obtener la lista de participantes.');
     }
+  },
+
+  async getTotalParticipantes() {
+    try {
+      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/total_participantes`);
+      await handleApiError(response);
+      return await response.json();
+    } catch (error) {
+      console.error('Error al obtener el total de participantes:', error);
+      throw new Error('Error al obtener el total de participantes.');
+    }
   }
 };
 

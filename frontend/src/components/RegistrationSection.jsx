@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Star, Shield, Coffee, Trophy, Heart, Zap, Sparkles } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
+import { apiService } from '../services/api';
 
 const RegistrationSection = ({ setActiveSection }) => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
-  const [participantsCount, setParticipantsCount] = useState(1247);
-  
-  // Simular incremento de participantes cada cierto tiempo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setParticipantsCount(prev => {
-        // Incrementar aleatoriamente entre 1-3 participantes
-        const increment = Math.floor(Math.random() * 3) + 1;
-        const newCount = prev + increment;
-        // No superar los 2000 participantes
-        return Math.min(newCount, 2000);
-      });
-    }, 15000); // Cada 15 segundos
+  const [participantsCount, setParticipantsCount] = useState(0);
 
+  // Obtener el total de participantes desde el endpoint
+  useEffect(() => {
+    const fetchTotal = async () => {
+      try {
+        const res = await apiService.getTotalParticipantes();
+        setParticipantsCount(res.total);
+      } catch (error) {
+        setParticipantsCount(0);
+      }
+    };
+    fetchTotal();
+    // Opcional: refrescar cada cierto tiempo
+    const interval = setInterval(fetchTotal, 30000); // cada 30 segundos
     return () => clearInterval(interval);
   }, []);
-  
+
   const registrationSteps = [
     {
       step: '1',
