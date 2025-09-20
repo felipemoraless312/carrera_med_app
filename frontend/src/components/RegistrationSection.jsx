@@ -7,6 +7,12 @@ const RegistrationSection = ({ setActiveSection }) => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(0);
 
+  const handleShowRegistrationForm = () => {
+    setShowRegistrationForm(true);
+    // Hacer scroll hacia arriba suavemente
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Obtener el total de participantes desde el endpoint
   useEffect(() => {
     const fetchTotal = async () => {
@@ -102,7 +108,7 @@ const RegistrationSection = ({ setActiveSection }) => {
               </div>
               <div className="mt-8 space-y-4">
                 <button
-                  onClick={() => setShowRegistrationForm(true)}
+                  onClick={handleShowRegistrationForm}
                   className="group w-full bg-blue-700 hover:bg-blue-800 text-gray-100 py-5 px-6 rounded-2xl text-xl font-black transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-blue-900/40 relative overflow-hidden"
                 >
                   Registrarse Ahora
