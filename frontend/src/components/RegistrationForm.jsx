@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Phone, User, Briefcase, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { apiService, downloadUtils } from '../services/api';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
+  const resultRef = useRef(null);
   const [formData, setFormData] = useState({
     nombre: '',
     sexo: '',
@@ -87,6 +88,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         sector_profesional: ''
       });
 
+      // Scroll automático hacia el resultado después de un registro exitoso
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+
     } catch (error) {
       console.error('Error en registro:', error);
       setRegistrationResult({
@@ -146,11 +152,14 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
           {/* Resultado del registro */}
           {registrationResult && (
-            <div className={`mb-6 p-4 rounded-2xl border-2 ${
-              registrationResult.type === 'success' 
-                ? 'bg-green-900/50 border-green-400 text-green-100' 
-                : 'bg-red-900/50 border-red-400 text-red-100'
-            }`}>
+            <div 
+              ref={resultRef}
+              className={`mb-6 p-4 rounded-2xl border-2 ${
+                registrationResult.type === 'success' 
+                  ? 'bg-green-900/50 border-green-400 text-green-100' 
+                  : 'bg-red-900/50 border-red-400 text-red-100'
+              }`}
+            >
               <div className="flex items-center">
                 {registrationResult.type === 'success' ? (
                   <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
