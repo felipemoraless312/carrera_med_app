@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
   const [timeLeft, setTimeLeft] = useState({
@@ -36,7 +35,6 @@ const HeroSection = ({ setActiveSection }) => {
   const eventDate = '2025-10-18T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
-  const navigate = useNavigate();
 
   // Imágenes del carrusel
   const images = [
@@ -52,7 +50,7 @@ const HeroSection = ({ setActiveSection }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 4000); // Cambia cada 4 segundos
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [images.length]);
@@ -63,6 +61,10 @@ const HeroSection = ({ setActiveSection }) => {
 
   const prevImage = () => {
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
+  const handleRegistro = () => {
+    alert('Redirigiendo al formulario de registro...');
   };
 
   return (
@@ -114,6 +116,33 @@ const HeroSection = ({ setActiveSection }) => {
                 </a>
               </div>
 
+              {/* Fechas importantes */}
+              <div className="bg-blue-900/70 backdrop-blur-xl rounded-3xl p-6 border border-blue-400/20 shadow-2xl">
+                <h3 className="text-xl md:text-2xl font-bold mb-4 text-blue-100 flex items-center gap-2">
+                  Fechas Importantes
+                </h3>
+                <div className="space-y-3">
+                  <div className="bg-blue-800/50 rounded-xl p-4 border border-blue-400/20">
+                    <p className="text-blue-200 font-semibold mb-1">Fecha de término de Registro</p>
+                    <p className="text-white text-sm">15 de Octubre - 23:59 PM</p>
+                  </div>
+                  <div className="bg-blue-800/50 rounded-xl p-4 border border-blue-400/20">
+                    <p className="text-blue-200 font-semibold mb-2">Entrega de Números</p>
+                    <p className="text-white text-sm mb-2">15 al 17 de Octubre</p>
+                    <p className="text-blue-100 text-xs mb-2">Horario: 9:00 AM - 5:30 PM</p>
+                    <a
+                      href="https://maps.app.goo.gl/SzuFcev2roHYynDU8"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-100 transition-colors underline"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      Ver ubicación en mapa
+                    </a>
+                  </div>
+                </div>
+              </div>
+
               {/* Contador Regresivo */}
               <div className="bg-blue-900/70 backdrop-blur-xl rounded-3xl p-6 border border-blue-400/20 shadow-2xl">
                 <h3 className="text-xl md:text-2xl font-bold mb-6 text-blue-100 text-center">
@@ -157,9 +186,6 @@ const HeroSection = ({ setActiveSection }) => {
                       className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
                         index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                       }`}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
                     />
                   ))}
                   
@@ -198,20 +224,20 @@ const HeroSection = ({ setActiveSection }) => {
           <div className="text-center space-y-4">
             <button
               type="button"
-              onClick={() => navigate('/registro')}
+              onClick={handleRegistro}
               className="group relative bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 hover:from-blue-300 hover:via-blue-400 hover:to-blue-600 text-white px-10 py-5 rounded-full text-xl font-black transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-blue-500/50 inline-block text-center"
             >
               <span className="relative z-10">¡Regístrate Ahora!</span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
             <p className="text-sm text-blue-100">
-              Únete a más de 2,000 participantes
+              ¡Cupos limitados! Asegura tu lugar en la carrera más esperada del año.
             </p>
           </div>
         </div>
       </div>
       
-      {/* Decoración inferior con animación - mejorada para desktop */}
+      {/* Decoración inferior con animación */}
       <div className="absolute bottom-0 left-0 right-0 z-0">
         <svg viewBox="0 0 1440 120" className="w-full h-16 md:h-24 lg:h-32" style={{ fill: 'url(#hero-footer-gradient)' }} preserveAspectRatio="none">
           <defs>
@@ -221,7 +247,6 @@ const HeroSection = ({ setActiveSection }) => {
               <stop offset="100%" stopColor="#0d1e7cff" />
             </linearGradient>
           </defs>
-          {/* Ola más suave y mejor optimizada para desktop */}
           <path d="M0,40L60,45C120,50,240,60,360,65C480,70,600,70,720,65C840,60,960,50,1080,45C1200,40,1320,40,1380,40L1440,40L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z"></path>
         </svg>
       </div>
