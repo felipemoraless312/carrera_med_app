@@ -61,7 +61,7 @@ const ContactSection = () => {
     { 
       icon: Phone, 
       title: 'Teléfono',
-      details: ['61 3 66 66'],
+      details: ['961 613 66 66'],
       gradient: 'from-green-500 to-emerald-600',
       bgColor: 'bg-green-50'
     },
