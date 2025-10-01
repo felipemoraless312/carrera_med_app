@@ -49,7 +49,7 @@ const RegistrationSection = ({ setActiveSection }) => {
     },
     {
       step: '4',
-      title: '¡Listo para correr!',
+      title: '¡Descarga tu imagen y preparate para correr!',
       description: '¡Prepárate para el evento!',
       gradient: 'from-purple-800 to-violet-800'
     }
@@ -115,7 +115,7 @@ const RegistrationSection = ({ setActiveSection }) => {
                 </button>
                 <div className="text-center">
                   <p className="text-gray-400 text-sm">
-                    ¡Inscripción gratuita para todos los participantes!
+                    ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante!
                   </p>
                 </div>
               </div>
@@ -139,15 +139,7 @@ const RegistrationSection = ({ setActiveSection }) => {
         </div>
 
         {/* Información adicional con efectos */}
-        <div className="mt-12 grid md:grid-cols-2 gap-8 animate-fade-in delay-1000">
-          <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 text-center transform hover:scale-110 transition-all duration-300 hover:bg-white/20 group">
-            <div className="text-4xl font-black bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2 group-hover:animate-pulse">
-              2,000
-            </div>
-            <div className="text-white/80 font-bold group-hover:text-white transition-colors duration-300">
-              Participantes esperados
-            </div>
-          </div>
+        <div className="mt-12 grid md:grid-cols-1 gap-8 animate-fade-in delay-1000">
           <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-6 border border-white/20 text-center transform hover:scale-110 transition-all duration-300 hover:bg-white/20 group">
             <div className="text-4xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-2 group-hover:animate-pulse">
               XXXII
