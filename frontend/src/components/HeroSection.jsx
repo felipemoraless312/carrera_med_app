@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
@@ -32,6 +33,7 @@ const useCountdown = (targetDate) => {
 };
 
 const HeroSection = ({ setActiveSection }) => {
+  const navigate = useNavigate();
   const eventDate = '2025-10-18T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
@@ -64,7 +66,7 @@ const HeroSection = ({ setActiveSection }) => {
   };
 
   const handleRegistro = () => {
-    alert('Redirigiendo al formulario de registro...');
+    navigate('/registro');
   };
 
   return (
