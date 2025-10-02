@@ -20,7 +20,7 @@ const Footer = ({ setActiveSection }) => {
   ];
 
   const contactInfo = [
-    { icon: Phone, text: '61 3 66 66' },
+    { icon: Phone, text: '961 613 66 66' },
     { icon: MapPin, text: 'Tuxtla Gutiérrez, Chiapas' }
   ];
 
@@ -146,3 +146,4 @@ const Footer = ({ setActiveSection }) => {
 };
 
 export default Footer;
+
