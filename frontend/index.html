@@ -191,13 +191,6 @@
     <script>
       // Remover la clase no-js cuando JavaScript esté disponible
       document.documentElement.classList.remove('no-js');
-      
-      // Precargar recursos importantes
-      const preloadLink = document.createElement('link');
-      preloadLink.rel = 'preload';
-      preloadLink.as = 'style';
-      preloadLink.href = '/src/index.css';
-      document.head.appendChild(preloadLink);
     </script>
   </body>
 </html>
