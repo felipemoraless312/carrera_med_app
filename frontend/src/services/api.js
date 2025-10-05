@@ -1,16 +1,21 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
-  // Si hay una variable de entorno específica (incluso si está vacía, es intencional)
-  if (import.meta.env.VITE_API_URL !== undefined) {
-    return import.meta.env.VITE_API_URL || ''; // Si está vacía, usar proxy
+  console.log('🔍 getApiUrl Debug:', {
+    VITE_API_URL: import.meta.env.VITE_API_URL,
+    VITE_API_URL_defined: import.meta.env.VITE_API_URL !== undefined,
+    DEV: import.meta.env.DEV,
+    PROD: import.meta.env.PROD
+  });
+  
+  // Si VITE_API_URL está definida (incluso si está vacía)
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (apiUrl !== undefined) {
+    console.log('📍 Using VITE_API_URL:', apiUrl === '' ? 'EMPTY (proxy mode)' : apiUrl);
+    return apiUrl; // Si está vacía (''), usar proxy
   }
   
-  // En desarrollo, usar proxy de Vite
-  if (import.meta.env.DEV) {
-    return ''; // El proxy maneja /api/*
-  }
-  
-  // En producción sin variable de entorno, usar rutas relativas (proxy nginx)
+  // Fallback: siempre usar proxy (rutas relativas)
+  console.log('📍 Using fallback: proxy mode');
   return '';
 };
 
@@ -28,9 +33,12 @@ const API_CONFIG = {
 if (import.meta.env.VITE_DEBUG_API === 'true') {
   console.log('🔧 API Configuration:', {
     BASE_URL: API_CONFIG.BASE_URL,
+    BASE_URL_type: typeof API_CONFIG.BASE_URL,
+    BASE_URL_length: API_CONFIG.BASE_URL.length,
     DEV: import.meta.env.DEV,
     PROD: import.meta.env.PROD,
     VITE_API_URL: import.meta.env.VITE_API_URL,
+    VITE_API_URL_type: typeof import.meta.env.VITE_API_URL,
     window_location: typeof window !== 'undefined' ? window.location.href : 'N/A'
   });
 }
@@ -59,9 +67,18 @@ const fetchWithTimeout = async (url, options = {}) => {
   if (import.meta.env.VITE_DEBUG_API === 'true') {
     console.log('🌐 Fetching:', {
       url,
+      BASE_URL_used: API_CONFIG.BASE_URL,
+      final_url: url,
       method: options.method || 'GET',
       headers: { ...API_CONFIG.DEFAULT_HEADERS, ...options.headers },
-      timeout: API_CONFIG.TIMEOUT
+      timeout: API_CONFIG.TIMEOUT,
+      is_relative: !url.startsWith('http'),
+      url_analysis: {
+        starts_with_http: url.startsWith('http'),
+        starts_with_https: url.startsWith('https'),
+        starts_with_slash: url.startsWith('/'),
+        contains_52: url.includes('52.14.168.116')
+      }
     });
   }
   
