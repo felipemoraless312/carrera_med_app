@@ -108,18 +108,53 @@ const AttendanceView = ({ onBack }) => {
     try {
       console.log('📡 Haciendo petición a la API...');
       
-      // SIEMPRE buscar en TODOS los participantes (tu API no soporta search)
+      // SIEMPRE buscar en TODOS los participantes (necesitamos los 2731)
       console.log('🔄 Obteniendo TODOS los participantes para filtrar...');
-      const response = await fetch(`/api/participantes?limit=10000`);
+      console.log('📊 Total esperado:', totalParticipantes);
+      const response = await fetch(`/api/participantes?limit=${Math.max(10000, totalParticipantes || 5000)}&offset=0`);
       
       console.log('📥 Respuesta recibida:', response.status, response.ok);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Datos recibidos:', data);
+        console.log('📊 Datos recibidos de la API:', {
+          participantes_length: data.participantes?.length || 0,
+          total_en_data: data.total || 'no_especificado',
+          estructura_data: Object.keys(data)
+        });
         
         let allResults = data.participantes || [];
-        console.log('🔢 Total de participantes obtenidos:', allResults.length);
+        console.log('🔢 Participantes obtenidos vs esperados:', allResults.length, 'de', totalParticipantes);
+        
+        // Si no obtuvo todos, intentar con múltiples peticiones
+        if (allResults.length < totalParticipantes && allResults.length > 0) {
+          console.log('⚠️ No se obtuvieron todos los participantes. Haciendo peticiones adicionales...');
+          const totalPages = Math.ceil(totalParticipantes / allResults.length);
+          console.log('📄 Páginas estimadas necesarias:', totalPages);
+          
+          for (let page = 1; page < Math.min(totalPages, 10); page++) { // Máximo 10 páginas para evitar loops
+            try {
+              console.log(`📄 Obteniendo página ${page + 1}...`);
+              const pageResponse = await fetch(`/api/participantes?limit=300&offset=${page * 300}`);
+              if (pageResponse.ok) {
+                const pageData = await pageResponse.json();
+                const pageParticipantes = pageData.participantes || [];
+                allResults.push(...pageParticipantes);
+                console.log(`✅ Página ${page + 1}: +${pageParticipantes.length} participantes. Total: ${allResults.length}`);
+                
+                if (pageParticipantes.length === 0) {
+                  console.log('🏁 No hay más participantes, terminando...');
+                  break;
+                }
+              }
+            } catch (e) {
+              console.error(`❌ Error obteniendo página ${page + 1}:`, e);
+              break;
+            }
+          }
+        }
+        
+        console.log('🔢 TOTAL FINAL de participantes obtenidos:', allResults.length);
         
         // Filtrar los resultados en el cliente
         const filteredResults = allResults.filter(p => {
@@ -288,12 +323,13 @@ const AttendanceView = ({ onBack }) => {
         {/* Debug Info - TEMPORAL */}
         {searchTerm && (
           <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-3 mb-4 text-xs text-gray-300">
-            <p><strong>Debug:</strong></p>
-            <p>• Término búsqueda: "{searchTerm}"</p>
-            <p>• Es búsqueda global: {isGlobalSearch ? 'Sí' : 'No'}</p>
-            <p>• Está buscando: {globalSearching ? 'Sí' : 'No'}</p>
-            <p>• Resultados mostrados: {filteredParticipantes.length}</p>
-            <p>• Participantes página actual: {participantes.length}</p>
+            <p><strong>Debug Búsqueda Global:</strong></p>
+            <p>• Término: "{searchTerm}"</p>
+            <p>• Estado: {globalSearching ? '🔄 Buscando...' : isGlobalSearch ? '✅ Completada' : '⏳ Pendiente'}</p>
+            <p>• Resultados mostrados: <strong>{filteredParticipantes.length}</strong></p>
+            <p>• Total en BD: <strong>{totalParticipantes}</strong></p>
+            <p>• Página actual: {participantes.length} de 300</p>
+            <p><strong>🔍 Abre la consola (F12) para ver logs detallados</strong></p>
           </div>
         )}
 
