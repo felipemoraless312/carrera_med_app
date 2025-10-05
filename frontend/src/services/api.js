@@ -1,12 +1,12 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Para desarrollo local
-    return 'http://52.14.168.116:8000';
+  // En desarrollo, usar el proxy de Vite
+  if (import.meta.env.DEV) {
+    return ''; // El proxy de Vite maneja /api/*
   }
   
-  // Para producción - usar el proxy reverso
-  return '/api';
+  // En producción o si no hay proxy disponible, usar la URL directa del servidor
+  return 'http://52.14.168.116:8000';
 };
 
 const API_CONFIG = {
