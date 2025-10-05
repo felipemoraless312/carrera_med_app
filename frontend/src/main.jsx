@@ -10,17 +10,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-window.addEventListener('keydown', function(e) {
-  if (e.ctrlKey && e.key.toLowerCase() === 'u') {
-    e.preventDefault();
-  }
-  if (e.key === 'F12') {
-    e.preventDefault();
-  }
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'i') {
-    e.preventDefault();
-  }
-});
-window.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
-});
