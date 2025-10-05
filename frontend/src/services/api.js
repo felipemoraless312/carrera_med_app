@@ -29,6 +29,32 @@ const API_CONFIG = {
   TIMEOUT: import.meta.env.VITE_API_TIMEOUT || 30000
 };
 
+// Función para construir URLs de API correctamente
+const buildApiUrl = (endpoint) => {
+  const baseUrl = API_CONFIG.BASE_URL;
+  let finalUrl;
+  
+  // Si BASE_URL está vacío (modo proxy), asegurar que empiece con /api/
+  if (!baseUrl || baseUrl === '') {
+    finalUrl = endpoint.startsWith('/api/') ? endpoint : `/api${endpoint}`;
+  } else {
+    // Si BASE_URL tiene valor, concatenar normalmente
+    finalUrl = `${baseUrl}${endpoint}`;
+  }
+  
+  // Debug logging para URLs
+  if (import.meta.env.VITE_DEBUG_API === 'true') {
+    console.log('🔗 buildApiUrl:', {
+      input_endpoint: endpoint,
+      base_url: baseUrl,
+      final_url: finalUrl,
+      is_proxy_mode: !baseUrl || baseUrl === ''
+    });
+  }
+  
+  return finalUrl;
+};
+
 // Debug logging
 if (import.meta.env.VITE_DEBUG_API === 'true') {
   console.log('🔧 API Configuration:', {
@@ -129,7 +155,7 @@ const fetchWithTimeout = async (url, options = {}) => {
 export const apiService = {
   async healthCheck() {
     try {
-      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/health`);
+      const response = await fetchWithTimeout(buildApiUrl('/api/health'));
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -140,7 +166,7 @@ export const apiService = {
 
   async getStatus() {
     try {
-      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/status`);
+      const response = await fetchWithTimeout(buildApiUrl('/api/status'));
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -151,7 +177,7 @@ export const apiService = {
 
   async getSectores() {
     try {
-      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/sectores`);
+      const response = await fetchWithTimeout(buildApiUrl('/api/sectores'));
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -179,7 +205,7 @@ export const apiService = {
         throw new Error('Debe seleccionar un sector profesional');
       }
 
-      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/registro`, {
+      const response = await fetchWithTimeout(buildApiUrl('/api/registro'), {
         method: 'POST',
         body: JSON.stringify({
           nombre: participanteData.nombre.trim(),
@@ -215,7 +241,7 @@ export const apiService = {
         throw new Error('Número y nombre del participante son requeridos');
       }
 
-      const imageUrl = `${API_CONFIG.BASE_URL}/api/imagen/${numeroParticipante}?nombre=${encodeURIComponent(nombreParticipante)}`;
+      const imageUrl = buildApiUrl(`/api/imagen/${numeroParticipante}?nombre=${encodeURIComponent(nombreParticipante)}`);
       
       const response = await fetchWithTimeout(imageUrl);
       await handleApiError(response);
@@ -236,12 +262,12 @@ export const apiService = {
   // Obtener lista de participantes (para administración)
   async getParticipantes(limit = 100, offset = 0, search = null) {
     try {
-      let url = `${API_CONFIG.BASE_URL}/api/participantes?limit=${limit}&offset=${offset}`;
+      let endpoint = `/api/participantes?limit=${limit}&offset=${offset}`;
       if (search && search.trim()) {
-        url += `&search=${encodeURIComponent(search.trim())}`;
+        endpoint += `&search=${encodeURIComponent(search.trim())}`;
       }
       
-      const response = await fetchWithTimeout(url);
+      const response = await fetchWithTimeout(buildApiUrl(endpoint));
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -252,7 +278,7 @@ export const apiService = {
 
   async getTotalParticipantes() {
     try {
-      const response = await fetchWithTimeout(`${API_CONFIG.BASE_URL}/api/total_participantes`);
+      const response = await fetchWithTimeout(buildApiUrl('/api/total_participantes'));
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -269,7 +295,7 @@ export const apiService = {
       }
 
       const response = await fetchWithTimeout(
-        `${API_CONFIG.BASE_URL}/api/participantes/buscar?tipo=${tipo}&valor=${encodeURIComponent(valor.trim())}`
+        buildApiUrl(`/api/participantes/buscar?tipo=${tipo}&valor=${encodeURIComponent(valor.trim())}`)
       );
 
       if (response.status === 404) {
@@ -288,7 +314,7 @@ export const apiService = {
   async actualizarAsistencia(id, asistio) {
     try {
       const response = await fetchWithTimeout(
-        `${API_CONFIG.BASE_URL}/api/participantes/${id}/asistencia`,
+        buildApiUrl(`/api/participantes/${id}/asistencia`),
         {
           method: 'PATCH',
           body: JSON.stringify({ asistio })
@@ -311,7 +337,7 @@ export const apiService = {
       }
 
       const response = await fetchWithTimeout(
-        `${API_CONFIG.BASE_URL}/api/participantes/asistencia/bulk`,
+        buildApiUrl('/api/participantes/asistencia/bulk'),
         {
           method: 'PATCH',
           body: JSON.stringify({ ids, asistio })
@@ -335,7 +361,7 @@ export const apiService = {
 
       // Buscar con límite alto para obtener todos los resultados
       const response = await fetchWithTimeout(
-        `${API_CONFIG.BASE_URL}/api/participantes?limit=5000&search=${encodeURIComponent(searchTerm.trim())}`
+        buildApiUrl(`/api/participantes?limit=5000&search=${encodeURIComponent(searchTerm.trim())}`)
       );
 
       await handleApiError(response);
