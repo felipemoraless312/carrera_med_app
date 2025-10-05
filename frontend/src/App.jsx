@@ -15,8 +15,8 @@ import Footer from './components/Footer.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 
 // Componentes de administración (crear estos archivos)
-import AttendanceView from './components/admin/AttendanceView.jsx';
-import GeneralSearchView from './components/admin/GeneralSearchView.jsx';
+import AttendanceView from './components/AsisList.jsx';
+import GeneralSearchView from './components/AsistView.jsx';
 
 const App = () => {
   return (
