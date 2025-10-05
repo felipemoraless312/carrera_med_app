@@ -68,6 +68,16 @@ const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
   
+  // Debug logging detallado
+  if (import.meta.env.VITE_DEBUG_API === 'true') {
+    console.log('🌐 Fetching:', {
+      url,
+      method: options.method || 'GET',
+      headers: { ...API_CONFIG.DEFAULT_HEADERS, ...options.headers },
+      timeout: API_CONFIG.TIMEOUT
+    });
+  }
+  
   try {
     const response = await fetch(url, {
       ...options,
@@ -79,9 +89,31 @@ const fetchWithTimeout = async (url, options = {}) => {
     });
     
     clearTimeout(timeoutId);
+    
+    // Debug logging de respuesta
+    if (import.meta.env.VITE_DEBUG_API === 'true') {
+      console.log('📥 Response:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        ok: response.ok
+      });
+    }
+    
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
+    
+    // Debug logging de errores
+    if (import.meta.env.VITE_DEBUG_API === 'true') {
+      console.error('💥 Fetch Error:', {
+        url,
+        error: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+    }
     
     if (error.name === 'AbortError') {
       throw new Error('La petición ha tardado demasiado. Verifique su conexión a internet.');

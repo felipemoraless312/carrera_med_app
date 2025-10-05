@@ -387,14 +387,80 @@ const AttendanceView = ({ onBack }) => {
                 </div>
               </div>
             </div>
-            <button
-              onClick={loadParticipantes}
-              disabled={loading}
-              className="flex items-center px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-xl transition-all duration-300"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualizar
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={loadParticipantes}
+                disabled={loading}
+                className="flex items-center px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-xl transition-all duration-300"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Actualizar
+              </button>
+              
+              <button
+                onClick={async () => {
+                  console.log('🔧 === DIAGNÓSTICO COMPLETO ===');
+                  console.log('📍 Ubicación:', window.location.href);
+                  console.log('🌐 Entorno:', {
+                    DEV: import.meta.env.DEV,
+                    PROD: import.meta.env.PROD,
+                    MODE: import.meta.env.MODE
+                  });
+                  
+                  // Test de conectividad básica
+                  const tests = [
+                    { name: '🏠 Health Check', url: '/api/health' },
+                    { name: '📊 Status', url: '/api/status' },
+                    { name: '👥 Participantes (1)', url: '/api/participantes?limit=1' },
+                    { name: '🔢 Total', url: '/api/total_participantes' },
+                    { name: '🔍 Búsqueda Test', url: '/api/participantes?search=test&limit=1' }
+                  ];
+                  
+                  for (const test of tests) {
+                    try {
+                      console.log(`\n🧪 ${test.name}`);
+                      console.log(`   URL: ${test.url}`);
+                      
+                      const start = Date.now();
+                      const response = await fetch(test.url);
+                      const duration = Date.now() - start;
+                      
+                      console.log(`   ⏱️  ${duration}ms`);
+                      console.log(`   📡 ${response.status} ${response.statusText}`);
+                      console.log(`   📄 Content-Type: ${response.headers.get('content-type')}`);
+                      
+                      if (response.ok) {
+                        try {
+                          const data = await response.json();
+                          console.log(`   ✅ JSON OK - Keys:`, Object.keys(data));
+                          if (data.participantes) {
+                            console.log(`   👥 ${data.participantes.length} participantes`);
+                          }
+                        } catch (e) {
+                          console.log(`   ❌ JSON Parse Error:`, e.message);
+                          const text = await response.text();
+                          console.log(`   📝 Raw response:`, text.substring(0, 200));
+                        }
+                      } else {
+                        const errorText = await response.text();
+                        console.log(`   ❌ Error:`, errorText.substring(0, 200));
+                      }
+                    } catch (error) {
+                      console.log(`   💥 Network Error:`, error.message);
+                    }
+                    
+                    // Pausa entre tests
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                  }
+                  
+                  console.log('\n🔧 === DIAGNÓSTICO COMPLETO ===');
+                  alert('Diagnóstico completado - revisa la consola del navegador (F12)');
+                }}
+                className="flex items-center px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl transition-all duration-300 text-sm"
+              >
+                🔧 Test API
+              </button>
+            </div>
           </div>
 
           {/* Estadísticas */}
