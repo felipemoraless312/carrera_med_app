@@ -9,6 +9,12 @@ const AttendanceView = ({ onBack }) => {
   const [saving, setSaving] = useState(false);
   const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [globalSearching, setGlobalSearching] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({
+    totalFetched: 0,
+    pagesRequested: 0,
+    apiCalls: [],
+    lastSearchTime: null
+  });
   const itemsPerPage = 300;
 
   const {
@@ -86,121 +92,178 @@ const AttendanceView = ({ onBack }) => {
     }
   };
 
-  // Búsqueda global en toda la base de datos (TODAS las páginas)
+  // Búsqueda global usando el endpoint de búsqueda de la API
   const performGlobalSearch = async (searchValue) => {
-    console.log('🔍 Iniciando búsqueda global para:', searchValue);
-    
     if (!searchValue.trim()) {
       setIsGlobalSearch(false);
       setFilteredParticipantes(participantes);
+      setDebugInfo({ totalFetched: 0, pagesRequested: 0, apiCalls: [], lastSearchTime: null });
       return;
     }
 
     // Solo hacer búsqueda global si el término de búsqueda actual coincide
     if (searchValue !== searchTerm) {
-      console.log('❌ Búsqueda cancelada - término cambió');
       return;
     }
 
+    const startTime = Date.now();
     setGlobalSearching(true);
     setIsGlobalSearch(true);
+    setDebugInfo(prev => ({ 
+      ...prev, 
+      totalFetched: 0, 
+      pagesRequested: 1, 
+      apiCalls: [{
+        page: 1,
+        status: 'iniciando búsqueda con parámetro search',
+        searchTerm: searchValue,
+        method: 'API_SEARCH_ENDPOINT'
+      }],
+      lastSearchTime: new Date().toLocaleTimeString()
+    }));
 
     try {
-      console.log('📡 Haciendo petición a la API...');
-      
-      // SIEMPRE buscar en TODOS los participantes (necesitamos los 2731)
-      console.log('🔄 Obteniendo TODOS los participantes para filtrar...');
-      console.log('📊 Total esperado:', totalParticipantes);
-      const response = await fetch(`/api/participantes?limit=${Math.max(10000, totalParticipantes || 5000)}&offset=0`);
-      
-      console.log('📥 Respuesta recibida:', response.status, response.ok);
+      // ✅ USAR EL ENDPOINT DE BÚSQUEDA DE TU API con limit alto para obtener TODOS los resultados
+      const response = await fetch(`/api/participantes?search=${encodeURIComponent(searchValue)}&limit=10000&offset=0`);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Datos recibidos de la API:', {
-          participantes_length: data.participantes?.length || 0,
-          total_en_data: data.total || 'no_especificado',
-          estructura_data: Object.keys(data)
-        });
+        const searchResults = data.participantes || [];
         
+        // Actualizar debug: búsqueda completada
+        const endTime = Date.now();
+        setDebugInfo(prev => ({ 
+          ...prev,
+          totalFetched: searchResults.length,
+          filteredResults: searchResults.length,
+          searchDuration: endTime - startTime,
+          isComplete: true,
+          apiCalls: [{
+            ...prev.apiCalls[0],
+            status: 'exitoso - búsqueda directa en API',
+            received: searchResults.length,
+            searchInDatabase: true,
+            totalInDatabase: data.total,
+            method: 'API_SEARCH_ENDPOINT'
+          }]
+        }));
+
+        // ✅ Los resultados ya vienen filtrados desde la API, no necesitamos filtrar en el cliente
+        if (searchValue === searchTerm) {
+          setFilteredParticipantes(searchResults);
+        }
+        
+      } else {
+        // Si falla la búsqueda, hacer fallback al método anterior (obtener todo y filtrar)
+        setDebugInfo(prev => ({ 
+          ...prev,
+          apiCalls: [{
+            ...prev.apiCalls[0],
+            status: 'error en búsqueda API, usando fallback',
+            error: `HTTP ${response.status}`,
+            fallback: true
+          }]
+        }));
+        
+        // Fallback: obtener todos los datos y filtrar localmente
+        await performFallbackSearch(searchValue, startTime);
+      }
+
+    } catch (error) {
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [{
+          ...prev.apiCalls[0],
+          status: 'error en búsqueda API, usando fallback',
+          error: error.message,
+          fallback: true
+        }]
+      }));
+      
+      // Fallback en caso de error
+      await performFallbackSearch(searchValue, startTime);
+    } finally {
+      setGlobalSearching(false);
+    }
+  };
+
+  // Método fallback: obtener todos los datos y filtrar localmente (como antes)
+  const performFallbackSearch = async (searchValue, startTime) => {
+    try {
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [...prev.apiCalls, {
+          page: 'fallback',
+          status: 'iniciando fallback - obteniendo todos los datos',
+          limit: totalParticipantes,
+          method: 'FALLBACK_GET_ALL'
+        }]
+      }));
+
+      const response = await fetch(`/api/participantes?limit=${Math.max(10000, totalParticipantes || 5000)}&offset=0`);
+
+      if (response.ok) {
+        const data = await response.json();
         let allResults = data.participantes || [];
-        console.log('🔢 Participantes obtenidos vs esperados:', allResults.length, 'de', totalParticipantes);
         
-        // Si no obtuvo todos, intentar con múltiples peticiones
+        // Si necesita más páginas para obtener todos los datos
         if (allResults.length < totalParticipantes && allResults.length > 0) {
-          console.log('⚠️ No se obtuvieron todos los participantes. Haciendo peticiones adicionales...');
           const totalPages = Math.ceil(totalParticipantes / allResults.length);
-          console.log('📄 Páginas estimadas necesarias:', totalPages);
           
-          for (let page = 1; page < Math.min(totalPages, 10); page++) { // Máximo 10 páginas para evitar loops
-            try {
-              console.log(`📄 Obteniendo página ${page + 1}...`);
-              const pageResponse = await fetch(`/api/participantes?limit=300&offset=${page * 300}`);
-              if (pageResponse.ok) {
-                const pageData = await pageResponse.json();
-                const pageParticipantes = pageData.participantes || [];
-                allResults.push(...pageParticipantes);
-                console.log(`✅ Página ${page + 1}: +${pageParticipantes.length} participantes. Total: ${allResults.length}`);
-                
-                if (pageParticipantes.length === 0) {
-                  console.log('🏁 No hay más participantes, terminando...');
-                  break;
-                }
-              }
-            } catch (e) {
-              console.error(`❌ Error obteniendo página ${page + 1}:`, e);
-              break;
+          for (let page = 1; page < Math.min(totalPages, 10); page++) {
+            const pageResponse = await fetch(`/api/participantes?limit=300&offset=${page * 300}`);
+            if (pageResponse.ok) {
+              const pageData = await pageResponse.json();
+              const pageParticipantes = pageData.participantes || [];
+              allResults.push(...pageParticipantes);
+              
+              if (pageParticipantes.length === 0) break;
             }
           }
         }
         
-        console.log('🔢 TOTAL FINAL de participantes obtenidos:', allResults.length);
-        
-        // Filtrar los resultados en el cliente
+        // Filtrar localmente
         const filteredResults = allResults.filter(p => {
           const searchLower = searchValue.toLowerCase();
-          const matches = 
-            p.nombre.toLowerCase().includes(searchLower) ||
-            p.numero_asignado.toLowerCase().includes(searchLower) ||
-            p.telefono.includes(searchValue);
-          
-          if (matches) {
-            console.log('🎯 Match encontrado:', p.nombre, p.numero_asignado);
-          }
-          
-          return matches;
+          return p.nombre.toLowerCase().includes(searchLower) ||
+                 p.numero_asignado.toLowerCase().includes(searchLower) ||
+                 p.telefono.includes(searchValue);
         });
 
-        console.log('✅ Resultados filtrados para "' + searchValue + '":', filteredResults.length);
-        
-        // Mostrar algunos ejemplos de lo que encontró
-        if (filteredResults.length > 0) {
-          console.log('📝 Primeros resultados:', filteredResults.slice(0, 3).map(p => ({
-            nombre: p.nombre,
-            numero: p.numero_asignado
-          })));
-        }
+        const endTime = Date.now();
+        setDebugInfo(prev => ({ 
+          ...prev,
+          totalFetched: allResults.length,
+          filteredResults: filteredResults.length,
+          searchDuration: endTime - startTime,
+          isComplete: true,
+          apiCalls: [...prev.apiCalls, {
+            page: 'fallback-complete',
+            status: 'fallback completado - filtrado local',
+            received: allResults.length,
+            filtered: filteredResults.length,
+            method: 'FALLBACK_LOCAL_FILTER'
+          }]
+        }));
 
-        // Verificar de nuevo antes de actualizar
         if (searchValue === searchTerm) {
           setFilteredParticipantes(filteredResults);
         }
-      } else {
-        console.error('❌ Error en respuesta:', response.status);
-        if (searchValue === searchTerm) {
-          setFilteredParticipantes([]);
-        }
       }
-
-    } catch (error) {
-      console.error('💥 Error en búsqueda global:', error);
-      // Solo mostrar error si el término sigue siendo el mismo
+    } catch (fallbackError) {
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [...prev.apiCalls, {
+          page: 'fallback-error',
+          status: 'error en fallback',
+          error: fallbackError.message,
+          method: 'FALLBACK_ERROR'
+        }]
+      }));
+      
       if (searchValue === searchTerm) {
         setFilteredParticipantes([]);
       }
-    } finally {
-      setGlobalSearching(false);
-      console.log('🏁 Búsqueda global completada');
     }
   };
 
@@ -320,16 +383,144 @@ const AttendanceView = ({ onBack }) => {
           </div>
         )}
 
-        {/* Debug Info - TEMPORAL */}
+        {/* Debug Info - Panel completo sin necesidad de consola */}
         {searchTerm && (
-          <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-3 mb-4 text-xs text-gray-300">
-            <p><strong>Debug Búsqueda Global:</strong></p>
-            <p>• Término: "{searchTerm}"</p>
-            <p>• Estado: {globalSearching ? '🔄 Buscando...' : isGlobalSearch ? '✅ Completada' : '⏳ Pendiente'}</p>
-            <p>• Resultados mostrados: <strong>{filteredParticipantes.length}</strong></p>
-            <p>• Total en BD: <strong>{totalParticipantes}</strong></p>
-            <p>• Página actual: {participantes.length} de 300</p>
-            <p><strong>🔍 Abre la consola (F12) para ver logs detallados</strong></p>
+          <div className="bg-gray-800/90 border-2 border-yellow-500 rounded-xl p-4 mb-6 shadow-lg">
+            <div className="flex items-center mb-3">
+              <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2 animate-pulse"></div>
+              <h3 className="text-yellow-400 font-bold text-sm">🔍 DEBUG - Búsqueda Global en Tiempo Real</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-xs">
+              <div className="bg-gray-900/50 rounded-lg p-3">
+                <h4 className="text-blue-300 font-semibold mb-2">📊 Estado Actual</h4>
+                <p className="text-gray-300">• Término: <span className="text-white font-mono">"{searchTerm}"</span></p>
+                <p className="text-gray-300">• Estado: {globalSearching ? <span className="text-yellow-300">🔄 Buscando...</span> : isGlobalSearch ? <span className="text-green-300">✅ Completada</span> : <span className="text-orange-300">⏳ Pendiente</span>}</p>
+                <p className="text-gray-300">• Resultados mostrados: <span className="text-green-400 font-bold text-lg">{filteredParticipantes.length}</span></p>
+                <p className="text-gray-300">• Total en BD: <span className="text-blue-400 font-bold">{totalParticipantes}</span></p>
+                {debugInfo.lastSearchTime && (
+                  <p className="text-gray-300">• Última búsqueda: <span className="text-purple-400">{debugInfo.lastSearchTime}</span></p>
+                )}
+                {debugInfo.searchDuration && (
+                  <p className="text-gray-300">• Duración: <span className="text-yellow-400">{debugInfo.searchDuration}ms</span></p>
+                )}
+              </div>
+              
+              <div className="bg-gray-900/50 rounded-lg p-3">
+                <h4 className="text-green-300 font-semibold mb-2">✅ Progreso de la Búsqueda</h4>
+                {globalSearching ? (
+                  <div className="space-y-1">
+                    <p className="text-yellow-300">� Obteniendo todos los participantes...</p>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div className="bg-yellow-500 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                    </div>
+                    <p className="text-gray-400 text-xs">Esto puede tomar unos segundos...</p>
+                  </div>
+                ) : isGlobalSearch ? (
+                  <div className="space-y-1">
+                    <p className="text-green-300">✅ Búsqueda completada exitosamente</p>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{width: '100%'}}></div>
+                    </div>
+                    {filteredParticipantes.length > 0 ? (
+                      <p className="text-green-400">🎯 {filteredParticipantes.length} coincidencia{filteredParticipantes.length !== 1 ? 's' : ''} encontrada{filteredParticipantes.length !== 1 ? 's' : ''}</p>
+                    ) : (
+                      <p className="text-red-400">❌ Sin coincidencias para "{searchTerm}"</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-orange-300">⏳ Escribiendo término de búsqueda...</p>
+                )}
+              </div>
+              
+              <div className="bg-gray-900/50 rounded-lg p-3">
+                <h4 className="text-purple-300 font-semibold mb-2">📡 Proceso de Búsqueda</h4>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {debugInfo.apiCalls && debugInfo.apiCalls.length > 0 ? debugInfo.apiCalls.map((call, idx) => (
+                    <div key={idx} className="text-xs border-l-2 border-gray-600 pl-2 mb-2">
+                      <div className="text-gray-400 font-medium">
+                        {call.method === 'API_SEARCH_ENDPOINT' && '🔍 Búsqueda Directa API'}
+                        {call.method === 'FALLBACK_GET_ALL' && '📥 Fallback: Obtener Todos'}
+                        {call.method === 'FALLBACK_LOCAL_FILTER' && '🔄 Fallback: Filtro Local'}
+                        {call.method === 'FALLBACK_ERROR' && '❌ Error en Fallback'}
+                      </div>
+                      
+                      {call.status?.includes('iniciando') && <span className="text-yellow-400">🔄 {call.status}</span>}
+                      {call.status?.includes('exitoso') && (
+                        <div className="text-green-400">
+                          ✅ {call.status}
+                          {call.received && <span className="ml-1">({call.received} resultados)</span>}
+                          {call.searchInDatabase && <div className="text-green-300 text-xs mt-1">🎯 Búsqueda procesada por la base de datos</div>}
+                        </div>
+                      )}
+                      {call.status?.includes('error') && (
+                        <div className="text-red-400">
+                          ❌ {call.status}
+                          {call.error && <div className="text-red-300 text-xs">{call.error}</div>}
+                        </div>
+                      )}
+                      
+                      {call.searchTerm && (
+                        <div className="text-blue-300 text-xs mt-1">Término: "{call.searchTerm}"</div>
+                      )}
+                    </div>
+                  )) : (
+                    <p className="text-gray-500">Escribe algo para iniciar búsqueda...</p>
+                  )}
+                </div>
+                
+                <div className="mt-3 pt-2 border-t border-gray-700">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Método:</span>
+                    <span className="text-blue-400 font-medium">
+                      {debugInfo.apiCalls?.[0]?.searchInDatabase ? 'Búsqueda en BD' : 
+                       debugInfo.apiCalls?.[0]?.method === 'FALLBACK_LOCAL_FILTER' ? 'Filtro Local' : 
+                       globalSearching ? 'Procesando...' : 'Esperando...'}
+                    </span>
+                  </div>
+                  
+                  {debugInfo.isComplete && (
+                    <div className="mt-2 p-2 bg-green-900/30 rounded border border-green-600/50">
+                      <div className="text-green-300 text-xs font-medium">
+                        🎯 Búsqueda Completada
+                      </div>
+                      <div className="text-green-400 text-xs">
+                        {debugInfo.filteredResults} coincidencias de {debugInfo.totalFetched || totalParticipantes} registros
+                      </div>
+                      {debugInfo.searchDuration && (
+                        <div className="text-green-300 text-xs">
+                          ⏱️ Tiempo: {debugInfo.searchDuration}ms
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {isGlobalSearch && filteredParticipantes.length > 0 && (
+              <div className="mt-4 bg-blue-900/30 rounded-lg p-3">
+                <h4 className="text-blue-300 font-semibold mb-2">🎯 Primeros Resultados Encontrados:</h4>
+                <div className="space-y-1">
+                  {filteredParticipantes.slice(0, 5).map((p, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-300">{idx + 1}. <span className="text-white font-medium">{p.nombre}</span></span>
+                      <span className="text-blue-400 font-mono">#{p.numero_asignado}</span>
+                    </div>
+                  ))}
+                  {filteredParticipantes.length > 5 && (
+                    <p className="text-gray-400 text-xs mt-2">... y {filteredParticipantes.length - 5} más</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-4 pt-3 border-t border-gray-600">
+              <p className="text-gray-400 text-xs">
+                💡 <strong>Cómo funciona:</strong> La búsqueda obtiene TODOS los {totalParticipantes} participantes de la base de datos 
+                (puede requerir múltiples peticiones API) y luego filtra localmente por nombre, número o teléfono.
+              </p>
+            </div>
           </div>
         )}
 
