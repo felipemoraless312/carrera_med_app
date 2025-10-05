@@ -1,45 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, CheckCircle, XCircle, RefreshCw, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAttendance } from '../hooks/useApi';
 
 const AttendanceView = ({ onBack }) => {
-  const [participantes, setParticipantes] = useState([]);
   const [filteredParticipantes, setFilteredParticipantes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const itemsPerPage = 300;
 
-  // Simular carga de datos - Reemplazar con tu API
-  useEffect(() => {
-    fetchParticipantes();
-  }, [currentPage]);
+  const {
+    participantes,
+    loading,
+    error,
+    totalParticipantes,
+    fetchParticipantes,
+    updateAsistencia,
+    updateAsistenciaMasiva,
+    clearError
+  } = useAttendance();
 
-  const fetchParticipantes = async () => {
-    setLoading(true);
+  // Cargar datos de participantes
+  useEffect(() => {
+    loadParticipantes();
+  }, [currentPage, fetchParticipantes]);
+
+  const loadParticipantes = async () => {
     try {
-      // REEMPLAZAR CON TU API:
-      // const response = await fetch(`/api/participantes?limit=${itemsPerPage}&offset=${currentPage * itemsPerPage}`);
-      // const data = await response.json();
-      // setParticipantes(data.participantes);
-      
-      // Datos de ejemplo
-      const mockData = Array.from({ length: 300 }, (_, i) => ({
-        id: currentPage * 300 + i + 1,
-        numero_asignado: `P${String(currentPage * 300 + i + 1).padStart(4, '0')}`,
-        nombre: `Participante ${currentPage * 300 + i + 1}`,
-        sexo: i % 2 === 0 ? 'Masculino' : 'Femenino',
-        sector_profesional: ['Medicina General', 'Enfermería', 'Odontología'][i % 3],
-        telefono: `961${String(1000000 + i).slice(0, 7)}`,
-        asistio: false
-      }));
-      
-      setParticipantes(mockData);
-      setFilteredParticipantes(mockData);
+      const data = await fetchParticipantes(itemsPerPage, currentPage * itemsPerPage);
+      setFilteredParticipantes(data.participantes || []);
     } catch (error) {
       console.error('Error al cargar participantes:', error);
-    } finally {
-      setLoading(false);
+      setFilteredParticipantes([]);
     }
   };
 
@@ -58,39 +50,44 @@ const AttendanceView = ({ onBack }) => {
   }, [searchTerm, participantes]);
 
   const toggleAsistencia = async (id) => {
-    // Actualizar localmente
-    const updated = participantes.map(p =>
-      p.id === id ? { ...p, asistio: !p.asistio } : p
-    );
-    setParticipantes(updated);
-    setFilteredParticipantes(updated.filter(p =>
-      searchTerm === '' ||
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.numero_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.telefono.includes(searchTerm)
-    ));
+    const participante = participantes.find(p => p.id === id);
+    if (!participante) return;
 
-    // REEMPLAZAR CON TU API:
-    // try {
-    //   await fetch(`/api/participantes/${id}/asistencia`, {
-    //     method: 'PATCH',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ asistio: !participante.asistio })
-    //   });
-    // } catch (error) {
-    //   console.error('Error al actualizar asistencia:', error);
-    // }
+    const nuevoEstado = !participante.asistio;
+
+    try {
+      await updateAsistencia(id, nuevoEstado);
+      
+      // Actualizar lista filtrada
+      setFilteredParticipantes(prev => prev.map(p =>
+        p.id === id ? { ...p, asistio: nuevoEstado } : p
+      ));
+    } catch (error) {
+      console.error('Error al actualizar asistencia:', error);
+    }
   };
 
-  const handleMarcarTodos = (estado) => {
-    const updated = participantes.map(p => ({ ...p, asistio: estado }));
-    setParticipantes(updated);
-    setFilteredParticipantes(updated.filter(p =>
-      searchTerm === '' ||
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.numero_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.telefono.includes(searchTerm)
-    ));
+  const handleMarcarTodos = async (estado) => {
+    const idsParticipantes = filteredParticipantes.map(p => p.id);
+    
+    if (idsParticipantes.length === 0) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await updateAsistenciaMasiva(idsParticipantes, estado);
+      
+      // Actualizar lista filtrada
+      setFilteredParticipantes(prev => prev.map(p => 
+        idsParticipantes.includes(p.id) ? { ...p, asistio: estado } : p
+      ));
+    } catch (error) {
+      console.error('Error al marcar todos:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const stats = {
@@ -123,7 +120,7 @@ const AttendanceView = ({ onBack }) => {
               </div>
             </div>
             <button
-              onClick={fetchParticipantes}
+              onClick={loadParticipantes}
               disabled={loading}
               className="flex items-center px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-xl transition-all duration-300"
             >
@@ -160,6 +157,19 @@ const AttendanceView = ({ onBack }) => {
           </div>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-red-900/50 border-2 border-red-400 rounded-2xl p-4 mb-8">
+            <p className="text-red-100 font-medium">{error}</p>
+            <button
+              onClick={clearError}
+              className="mt-2 px-3 py-1 bg-red-800 hover:bg-red-700 text-white rounded text-sm"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Búsqueda y acciones */}
         <div className="bg-blue-900/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-blue-900/40 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
@@ -176,15 +186,31 @@ const AttendanceView = ({ onBack }) => {
             <div className="flex gap-2">
               <button
                 onClick={() => handleMarcarTodos(true)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors font-medium"
+                disabled={saving || filteredParticipantes.length === 0}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors font-medium flex items-center"
               >
-                Marcar Todos
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Marcar Todos'
+                )}
               </button>
               <button
                 onClick={() => handleMarcarTodos(false)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium"
+                disabled={saving || filteredParticipantes.length === 0}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors font-medium flex items-center"
               >
-                Desmarcar Todos
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Desmarcar Todos'
+                )}
               </button>
             </div>
           </div>
@@ -280,7 +306,7 @@ const AttendanceView = ({ onBack }) => {
               <div className="p-6 bg-blue-950/30 border-t border-blue-800/40">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-400">
-                    Mostrando {currentPage * itemsPerPage + 1} - {currentPage * itemsPerPage + participantes.length}
+                    Mostrando {currentPage * itemsPerPage + 1} - {currentPage * itemsPerPage + participantes.length} de {totalParticipantes} total
                   </p>
                   <div className="flex items-center space-x-2">
                     <button
@@ -296,7 +322,8 @@ const AttendanceView = ({ onBack }) => {
                     </span>
                     <button
                       onClick={() => setCurrentPage(currentPage + 1)}
-                      className="px-4 py-2 bg-blue-800 text-gray-300 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                      disabled={(currentPage + 1) * itemsPerPage >= totalParticipantes}
+                      className="px-4 py-2 bg-blue-800 text-gray-300 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
                     >
                       Siguiente
                       <ChevronRight className="w-4 h-4 ml-1" />

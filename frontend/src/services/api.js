@@ -191,6 +191,71 @@ export const apiService = {
       console.error('Error al obtener el total de participantes:', error);
       throw new Error('Error al obtener el total de participantes.');
     }
+  },
+
+  // Buscar participante por diferentes criterios
+  async buscarParticipante(tipo, valor) {
+    try {
+      if (!tipo || !valor?.trim()) {
+        throw new Error('Tipo de búsqueda y valor son requeridos');
+      }
+
+      const response = await fetchWithTimeout(
+        `${API_CONFIG.BASE_URL}/api/participantes/buscar?tipo=${tipo}&valor=${encodeURIComponent(valor.trim())}`
+      );
+
+      if (response.status === 404) {
+        return { error: 'Participante no encontrado' };
+      }
+
+      await handleApiError(response);
+      return await response.json();
+    } catch (error) {
+      console.error('Error al buscar participante:', error);
+      throw new Error('Error al buscar participante.');
+    }
+  },
+
+  // Actualizar asistencia individual
+  async actualizarAsistencia(id, asistio) {
+    try {
+      const response = await fetchWithTimeout(
+        `${API_CONFIG.BASE_URL}/api/participantes/${id}/asistencia`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ asistio })
+        }
+      );
+
+      await handleApiError(response);
+      return await response.json();
+    } catch (error) {
+      console.error('Error al actualizar asistencia:', error);
+      throw new Error('Error al actualizar asistencia.');
+    }
+  },
+
+  // Actualización masiva de asistencia
+  async actualizarAsistenciaMasiva(ids, asistio) {
+    try {
+      if (!Array.isArray(ids) || ids.length === 0) {
+        throw new Error('Lista de IDs no válida');
+      }
+
+      const response = await fetchWithTimeout(
+        `${API_CONFIG.BASE_URL}/api/participantes/asistencia/bulk`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ ids, asistio })
+        }
+      );
+
+      await handleApiError(response);
+      return await response.json();
+    } catch (error) {
+      console.error('Error en actualización masiva:', error);
+      throw new Error('Error en actualización masiva de asistencia.');
+    }
   }
 };
 

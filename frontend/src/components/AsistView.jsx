@@ -1,52 +1,22 @@
 import React, { useState } from 'react';
 import { Search, User, Phone, Briefcase, Calendar, Hash, ArrowLeft, Loader2, UserCheck, UserX } from 'lucide-react';
+import { useParticipantSearch } from '../hooks/useApi';
 
 const GeneralSearchView = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('numero'); // numero, nombre, telefono
-  const [searching, setSearching] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+
+  const {
+    searching,
+    result,
+    error,
+    searchParticipant,
+    clearSearch
+  } = useParticipantSearch();
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    
-    if (!searchTerm.trim()) {
-      setError('Por favor ingrese un término de búsqueda');
-      return;
-    }
-
-    setSearching(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      // REEMPLAZAR CON TU API:
-      // const response = await fetch(`/api/participantes/buscar?tipo=${searchType}&valor=${encodeURIComponent(searchTerm)}`);
-      // const data = await response.json();
-      
-      // Simulación de búsqueda
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Datos de ejemplo
-      const mockResult = {
-        id: 1,
-        numero_asignado: 'P0123',
-        nombre: 'Dr. Juan Pérez García',
-        sexo: 'Masculino',
-        telefono: '9611234567',
-        sector_profesional: 'Medicina General',
-        fecha_registro: '2025-10-01T10:30:00',
-        asistio: true
-      };
-      
-      setResult(mockResult);
-    } catch (err) {
-      setError('Error al buscar participante. Por favor intente nuevamente.');
-      console.error('Error en búsqueda:', err);
-    } finally {
-      setSearching(false);
-    }
+    await searchParticipant(searchType, searchTerm);
   };
 
   const formatFecha = (fecha) => {
@@ -61,8 +31,7 @@ const GeneralSearchView = ({ onBack }) => {
 
   const handleClear = () => {
     setSearchTerm('');
-    setResult(null);
-    setError(null);
+    clearSearch();
   };
 
   return (
