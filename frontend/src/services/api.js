@@ -1,11 +1,29 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
-  // En desarrollo, usar el proxy de Vite
-  if (import.meta.env.DEV) {
-    return ''; // El proxy de Vite maneja /api/*
+  // Verificar si hay una variable de entorno específica
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
   
-  // En producción o si no hay proxy disponible, usar la URL directa del servidor
+  // En desarrollo, usar proxy de Vite
+  if (import.meta.env.DEV) {
+    return ''; // El proxy maneja /api/*
+  }
+  
+  // En producción, detectar automáticamente
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location;
+    
+    // Si el frontend está en el mismo servidor que la API
+    if (hostname === '52.14.168.116' || hostname.includes('amazonaws.com')) {
+      return ''; // Usar rutas relativas
+    }
+    
+    // Si el frontend está en otro dominio, usar URL absoluta
+    return 'http://52.14.168.116:8000';
+  }
+  
+  // Fallback por defecto
   return 'http://52.14.168.116:8000';
 };
 
@@ -16,8 +34,19 @@ const API_CONFIG = {
     'Content-Type': 'application/json',
   },
   
-  TIMEOUT: 30000
+  TIMEOUT: import.meta.env.VITE_API_TIMEOUT || 30000
 };
+
+// Debug logging
+if (import.meta.env.VITE_DEBUG_API === 'true') {
+  console.log('🔧 API Configuration:', {
+    BASE_URL: API_CONFIG.BASE_URL,
+    DEV: import.meta.env.DEV,
+    PROD: import.meta.env.PROD,
+    VITE_API_URL: import.meta.env.VITE_API_URL,
+    window_location: typeof window !== 'undefined' ? window.location.href : 'N/A'
+  });
+}
 
 const handleApiError = async (response) => {
   if (!response.ok) {
