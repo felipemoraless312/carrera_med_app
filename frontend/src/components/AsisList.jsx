@@ -108,9 +108,9 @@ const AttendanceView = ({ onBack }) => {
     try {
       console.log('📡 Haciendo petición a la API...');
       
-      // Buscar en TODAS las páginas usando un límite alto
-      const searchQuery = encodeURIComponent(searchValue.trim());
-      const response = await fetch(`/api/participantes?limit=10000&search=${searchQuery}`);
+      // SIEMPRE buscar en TODOS los participantes (tu API no soporta search)
+      console.log('🔄 Obteniendo TODOS los participantes para filtrar...');
+      const response = await fetch(`/api/participantes?limit=10000`);
       
       console.log('📥 Respuesta recibida:', response.status, response.ok);
 
@@ -119,27 +119,32 @@ const AttendanceView = ({ onBack }) => {
         console.log('📊 Datos recibidos:', data);
         
         let allResults = data.participantes || [];
-        console.log('🔢 Participantes encontrados en servidor:', allResults.length);
-        
-        // Si el servidor no soporta búsqueda, buscar en TODOS los participantes
-        if (allResults.length === 0 || !searchQuery) {
-          console.log('🔄 Obteniendo TODOS los participantes...');
-          const allResponse = await fetch(`/api/participantes?limit=10000`);
-          if (allResponse.ok) {
-            const allData = await allResponse.json();
-            allResults = allData.participantes || [];
-            console.log('📋 Total de participantes obtenidos:', allResults.length);
-          }
-        }
+        console.log('🔢 Total de participantes obtenidos:', allResults.length);
         
         // Filtrar los resultados en el cliente
-        const filteredResults = allResults.filter(p =>
-          p.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
-          p.numero_asignado.toLowerCase().includes(searchValue.toLowerCase()) ||
-          p.telefono.includes(searchValue)
-        );
+        const filteredResults = allResults.filter(p => {
+          const searchLower = searchValue.toLowerCase();
+          const matches = 
+            p.nombre.toLowerCase().includes(searchLower) ||
+            p.numero_asignado.toLowerCase().includes(searchLower) ||
+            p.telefono.includes(searchValue);
+          
+          if (matches) {
+            console.log('🎯 Match encontrado:', p.nombre, p.numero_asignado);
+          }
+          
+          return matches;
+        });
 
-        console.log('✅ Resultados filtrados:', filteredResults.length);
+        console.log('✅ Resultados filtrados para "' + searchValue + '":', filteredResults.length);
+        
+        // Mostrar algunos ejemplos de lo que encontró
+        if (filteredResults.length > 0) {
+          console.log('📝 Primeros resultados:', filteredResults.slice(0, 3).map(p => ({
+            nombre: p.nombre,
+            numero: p.numero_asignado
+          })));
+        }
 
         // Verificar de nuevo antes de actualizar
         if (searchValue === searchTerm) {
