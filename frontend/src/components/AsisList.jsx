@@ -37,21 +37,12 @@ const AttendanceView = ({ onBack }) => {
     }
   };
 
-  // Filtrar participantes solo en la página actual (búsqueda local)
+  // Filtrar participantes solo en la página actual (búsqueda local) - SOLO si no hay búsqueda activa
   useEffect(() => {
-    if (!isGlobalSearch) {
-      if (searchTerm.trim() === '') {
-        setFilteredParticipantes(participantes);
-      } else {
-        const filtered = participantes.filter(p =>
-          p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.numero_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.telefono.includes(searchTerm)
-        );
-        setFilteredParticipantes(filtered);
-      }
+    if (!isGlobalSearch && !searchTerm.trim()) {
+      setFilteredParticipantes(participantes);
     }
-  }, [searchTerm, participantes, isGlobalSearch]);
+  }, [participantes, isGlobalSearch, searchTerm]);
 
   const toggleAsistencia = async (id) => {
     const participante = participantes.find(p => p.id === id);
@@ -101,6 +92,11 @@ const AttendanceView = ({ onBack }) => {
       return;
     }
 
+    // Solo hacer búsqueda global si el término de búsqueda actual coincide
+    if (searchValue !== searchTerm) {
+      return; // El usuario ya cambió el término, cancelar esta búsqueda
+    }
+
     setGlobalSearching(true);
     setIsGlobalSearch(true);
 
@@ -115,10 +111,14 @@ const AttendanceView = ({ onBack }) => {
 
       const response = await fetch(`/api/participantes/buscar?tipo=${searchType}&valor=${encodeURIComponent(searchValue.trim())}`);
       
+      // Verificar de nuevo si el término sigue siendo el mismo antes de actualizar
+      if (searchValue !== searchTerm) {
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         if (data.participante) {
-          // Si encontramos un participante específico, lo mostramos
           setFilteredParticipantes([data.participante]);
         } else {
           setFilteredParticipantes([]);
@@ -127,6 +127,12 @@ const AttendanceView = ({ onBack }) => {
         // Si no lo encuentra por el tipo específico, buscar por nombre
         if (searchType !== 'nombre') {
           const nameResponse = await fetch(`/api/participantes/buscar?tipo=nombre&valor=${encodeURIComponent(searchValue.trim())}`);
+          
+          // Verificar otra vez antes de procesar la respuesta
+          if (searchValue !== searchTerm) {
+            return;
+          }
+
           if (nameResponse.ok) {
             const nameData = await nameResponse.json();
             if (nameData.participante) {
@@ -145,7 +151,10 @@ const AttendanceView = ({ onBack }) => {
       }
     } catch (error) {
       console.error('Error en búsqueda global:', error);
-      setFilteredParticipantes([]);
+      // Solo mostrar error si el término sigue siendo el mismo
+      if (searchValue === searchTerm) {
+        setFilteredParticipantes([]);
+      }
     } finally {
       setGlobalSearching(false);
     }
@@ -155,15 +164,30 @@ const AttendanceView = ({ onBack }) => {
   useEffect(() => {
     if (!searchTerm.trim()) {
       setIsGlobalSearch(false);
+      setFilteredParticipantes(participantes);
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      performGlobalSearch(searchTerm);
-    }, 800); // Debounce de 800ms para búsqueda global
+    // Primero hacer búsqueda local inmediatamente
+    const localFiltered = participantes.filter(p =>
+      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.numero_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.telefono.includes(searchTerm)
+    );
+    
+    // Si encuentra resultados localmente, mostrarlos inmediatamente
+    if (localFiltered.length > 0) {
+      setFilteredParticipantes(localFiltered);
+      setIsGlobalSearch(false);
+    } else {
+      // Si no encuentra nada localmente, entonces hacer búsqueda global
+      const timeoutId = setTimeout(() => {
+        performGlobalSearch(searchTerm);
+      }, 600);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchTerm, participantes]);
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
@@ -284,7 +308,13 @@ const AttendanceView = ({ onBack }) => {
               }`} />
               <input
                 type="text"
-                placeholder={isGlobalSearch ? "Búsqueda global activa - Escriba para buscar en toda la base de datos..." : "Buscar en esta página o escribir para buscar globalmente..."}
+                placeholder={
+                  globalSearching 
+                    ? "Buscando en toda la base de datos..." 
+                    : isGlobalSearch 
+                      ? "Resultado de búsqueda global - Edite para buscar nuevamente" 
+                      : "Buscar por nombre, número o teléfono (primero en página, luego globalmente)..."
+                }
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className={`w-full pl-10 pr-20 py-3 bg-blue-950/60 border rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
