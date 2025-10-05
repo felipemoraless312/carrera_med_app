@@ -1,8 +1,8 @@
 // Función para obtener la URL de la API de manera segura
 const getApiUrl = () => {
-  // Verificar si hay una variable de entorno específica
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  // Si hay una variable de entorno específica (incluso si está vacía, es intencional)
+  if (import.meta.env.VITE_API_URL !== undefined) {
+    return import.meta.env.VITE_API_URL || ''; // Si está vacía, usar proxy
   }
   
   // En desarrollo, usar proxy de Vite
@@ -10,21 +10,8 @@ const getApiUrl = () => {
     return ''; // El proxy maneja /api/*
   }
   
-  // En producción, detectar automáticamente
-  if (typeof window !== 'undefined') {
-    const { protocol, hostname, port } = window.location;
-    
-    // Si el frontend está en el mismo servidor que la API
-    if (hostname === '52.14.168.116' || hostname.includes('amazonaws.com')) {
-      return ''; // Usar rutas relativas
-    }
-    
-    // Si el frontend está en otro dominio, usar URL absoluta
-    return 'http://52.14.168.116:8000';
-  }
-  
-  // Fallback por defecto
-  return 'http://52.14.168.116:8000';
+  // En producción sin variable de entorno, usar rutas relativas (proxy nginx)
+  return '';
 };
 
 const API_CONFIG = {
