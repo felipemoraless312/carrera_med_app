@@ -169,11 +169,14 @@ export const apiService = {
   },
 
   // Obtener lista de participantes (para administración)
-  async getParticipantes(limit = 100, offset = 0) {
+  async getParticipantes(limit = 100, offset = 0, search = null) {
     try {
-      const response = await fetchWithTimeout(
-        `${API_CONFIG.BASE_URL}/api/participantes?limit=${limit}&offset=${offset}`
-      );
+      let url = `${API_CONFIG.BASE_URL}/api/participantes?limit=${limit}&offset=${offset}`;
+      if (search && search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
+      }
+      
+      const response = await fetchWithTimeout(url);
       await handleApiError(response);
       return await response.json();
     } catch (error) {
@@ -255,6 +258,31 @@ export const apiService = {
     } catch (error) {
       console.error('Error en actualización masiva:', error);
       throw new Error('Error en actualización masiva de asistencia.');
+    }
+  },
+
+  // Búsqueda global en todas las páginas
+  async busquedaGlobal(searchTerm) {
+    try {
+      if (!searchTerm?.trim()) {
+        throw new Error('Término de búsqueda requerido');
+      }
+
+      // Buscar con límite alto para obtener todos los resultados
+      const response = await fetchWithTimeout(
+        `${API_CONFIG.BASE_URL}/api/participantes?limit=5000&search=${encodeURIComponent(searchTerm.trim())}`
+      );
+
+      await handleApiError(response);
+      const data = await response.json();
+      
+      return {
+        participantes: data.participantes || [],
+        total: data.total || 0
+      };
+    } catch (error) {
+      console.error('Error en búsqueda global:', error);
+      throw new Error('Error en búsqueda global.');
     }
   }
 };
