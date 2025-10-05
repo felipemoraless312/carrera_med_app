@@ -37,9 +37,10 @@ const AttendanceView = ({ onBack }) => {
     }
   };
 
-  // Filtrar participantes solo en la página actual (búsqueda local) - SOLO si no hay búsqueda activa
+  // Filtrar participantes solo en la página actual cuando NO hay búsqueda
   useEffect(() => {
-    if (!isGlobalSearch && !searchTerm.trim()) {
+    if (!searchTerm.trim() && !isGlobalSearch) {
+      console.log('🔄 Cargando participantes de página actual:', participantes.length);
       setFilteredParticipantes(participantes);
     }
   }, [participantes, isGlobalSearch, searchTerm]);
@@ -87,54 +88,79 @@ const AttendanceView = ({ onBack }) => {
 
   // Búsqueda global en toda la base de datos (TODAS las páginas)
   const performGlobalSearch = async (searchValue) => {
+    console.log('🔍 Iniciando búsqueda global para:', searchValue);
+    
     if (!searchValue.trim()) {
       setIsGlobalSearch(false);
+      setFilteredParticipantes(participantes);
       return;
     }
 
     // Solo hacer búsqueda global si el término de búsqueda actual coincide
     if (searchValue !== searchTerm) {
-      return; // El usuario ya cambió el término, cancelar esta búsqueda
+      console.log('❌ Búsqueda cancelada - término cambió');
+      return;
     }
 
     setGlobalSearching(true);
     setIsGlobalSearch(true);
 
     try {
+      console.log('📡 Haciendo petición a la API...');
+      
       // Buscar en TODAS las páginas usando un límite alto
       const searchQuery = encodeURIComponent(searchValue.trim());
       const response = await fetch(`/api/participantes?limit=10000&search=${searchQuery}`);
       
-      // Verificar si el término sigue siendo el mismo antes de actualizar
-      if (searchValue !== searchTerm) {
-        return;
-      }
+      console.log('📥 Respuesta recibida:', response.status, response.ok);
 
       if (response.ok) {
         const data = await response.json();
-        const allResults = data.participantes || [];
+        console.log('📊 Datos recibidos:', data);
         
-        // Filtrar los resultados en el cliente para mayor precisión
+        let allResults = data.participantes || [];
+        console.log('🔢 Participantes encontrados en servidor:', allResults.length);
+        
+        // Si el servidor no soporta búsqueda, buscar en TODOS los participantes
+        if (allResults.length === 0 || !searchQuery) {
+          console.log('🔄 Obteniendo TODOS los participantes...');
+          const allResponse = await fetch(`/api/participantes?limit=10000`);
+          if (allResponse.ok) {
+            const allData = await allResponse.json();
+            allResults = allData.participantes || [];
+            console.log('📋 Total de participantes obtenidos:', allResults.length);
+          }
+        }
+        
+        // Filtrar los resultados en el cliente
         const filteredResults = allResults.filter(p =>
           p.nombre.toLowerCase().includes(searchValue.toLowerCase()) ||
           p.numero_asignado.toLowerCase().includes(searchValue.toLowerCase()) ||
           p.telefono.includes(searchValue)
         );
 
-        setFilteredParticipantes(filteredResults);
+        console.log('✅ Resultados filtrados:', filteredResults.length);
+
+        // Verificar de nuevo antes de actualizar
+        if (searchValue === searchTerm) {
+          setFilteredParticipantes(filteredResults);
+        }
       } else {
-        console.warn('Búsqueda global no pudo completarse:', response.status);
-        setFilteredParticipantes([]);
+        console.error('❌ Error en respuesta:', response.status);
+        if (searchValue === searchTerm) {
+          setFilteredParticipantes([]);
+        }
       }
 
     } catch (error) {
-      console.error('Error en búsqueda global:', error);
+      console.error('💥 Error en búsqueda global:', error);
       // Solo mostrar error si el término sigue siendo el mismo
       if (searchValue === searchTerm) {
         setFilteredParticipantes([]);
       }
     } finally {
       setGlobalSearching(false);
+      console.log('🏁 Búsqueda global completada');
     }
   };
 
@@ -146,26 +172,13 @@ const AttendanceView = ({ onBack }) => {
       return;
     }
 
-    // Hacer búsqueda local inmediatamente para mostrar resultados rápidos
-    const localFiltered = participantes.filter(p =>
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.numero_asignado.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.telefono.includes(searchTerm)
-    );
-    
-    // Mostrar resultados locales inmediatamente si los hay
-    if (localFiltered.length > 0) {
-      setFilteredParticipantes(localFiltered);
-      setIsGlobalSearch(false);
-    }
-
-    // SIEMPRE hacer búsqueda global después de un delay para encontrar MÁS resultados
+    // SOLO hacer búsqueda global - eliminamos la búsqueda local que causa conflictos
     const timeoutId = setTimeout(() => {
       performGlobalSearch(searchTerm);
-    }, 800); // Aumenté el delay para evitar muchas peticiones
+    }, 600);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, participantes]);
+  }, [searchTerm]);
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
@@ -245,25 +258,37 @@ const AttendanceView = ({ onBack }) => {
         </div>
 
         {/* Información de búsqueda */}
-        {isGlobalSearch && (
+        {(isGlobalSearch || globalSearching) && (
           <div className="bg-blue-800/50 border-2 border-blue-600 rounded-2xl p-4 mb-8">
             <div className="flex items-center">
               <Search className="w-5 h-5 text-blue-300 mr-2" />
               <div>
                 <p className="text-blue-100 font-medium">
-                  {globalSearching ? 'Buscando en todas las páginas de la base de datos...' : 
+                  {globalSearching ? 'Buscando en toda la base de datos...' : 
                    filteredParticipantes.length > 0 ? 
-                   `Se encontr${filteredParticipantes.length === 1 ? 'ó' : 'aron'} ${filteredParticipantes.length} participante${filteredParticipantes.length === 1 ? '' : 's'} en toda la base de datos para "${searchTerm}"` :
-                   `No se encontraron participantes en ninguna página para "${searchTerm}"`}
+                   `✅ Se encontraron ${filteredParticipantes.length} participante${filteredParticipantes.length === 1 ? '' : 's'} para "${searchTerm}"` :
+                   `❌ No se encontraron participantes para "${searchTerm}"`}
                 </p>
                 <p className="text-blue-300 text-sm">
                   {globalSearching ? 
-                    `Buscando en ${Math.ceil(totalParticipantes / itemsPerPage)} páginas disponibles...` :
-                    'Resultados de búsqueda global - Limpie la búsqueda para volver a la vista por páginas'
+                    'Buscando en todas las páginas disponibles...' :
+                    `Búsqueda global completada - Total en BD: ${totalParticipantes}`
                   }
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Debug Info - TEMPORAL */}
+        {searchTerm && (
+          <div className="bg-gray-800/50 border border-gray-600 rounded-lg p-3 mb-4 text-xs text-gray-300">
+            <p><strong>Debug:</strong></p>
+            <p>• Término búsqueda: "{searchTerm}"</p>
+            <p>• Es búsqueda global: {isGlobalSearch ? 'Sí' : 'No'}</p>
+            <p>• Está buscando: {globalSearching ? 'Sí' : 'No'}</p>
+            <p>• Resultados mostrados: {filteredParticipantes.length}</p>
+            <p>• Participantes página actual: {participantes.length}</p>
           </div>
         )}
 
@@ -291,10 +316,10 @@ const AttendanceView = ({ onBack }) => {
                 type="text"
                 placeholder={
                   globalSearching 
-                    ? `Buscando en todas las ${Math.ceil(totalParticipantes / itemsPerPage)} páginas...` 
+                    ? "Buscando en toda la base de datos..." 
                     : isGlobalSearch 
-                      ? "Resultados de todas las páginas - Edite para buscar nuevamente" 
-                      : `Buscar en ${Math.ceil(totalParticipantes / itemsPerPage)} páginas (${totalParticipantes} participantes total)...`
+                      ? "Resultados globales - Edite para buscar nuevamente" 
+                      : "Buscar por nombre, número o teléfono en toda la base de datos..."
                 }
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
