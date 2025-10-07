@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, User, Phone, Briefcase, Calendar, Hash, ArrowLeft, Loader2, UserCheck, UserX } from 'lucide-react';
 import { useParticipantSearch } from '../hooks/useApi';
-
+//hola
 const GeneralSearchView = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('numero'); // numero, nombre, telefono
