@@ -10,6 +10,12 @@ const AttendanceView = ({ onBack }) => {
   const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [globalSearching, setGlobalSearching] = useState(false);
   const [showMobileStats, setShowMobileStats] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({
+    totalFetched: 0,
+    pagesRequested: 0,
+    apiCalls: [],
+    lastSearchTime: null
+  });
   const itemsPerPage = 300;
 
   const {
@@ -77,10 +83,271 @@ const AttendanceView = ({ onBack }) => {
     }
   };
 
+  // Búsqueda global usando el endpoint de búsqueda de la API
+  const performGlobalSearch = async (searchValue) => {
+    if (!searchValue.trim()) {
+      setIsGlobalSearch(false);
+      setFilteredParticipantes(participantes);
+      setDebugInfo({ totalFetched: 0, pagesRequested: 0, apiCalls: [], lastSearchTime: null });
+      return;
+    }
+
+    // Solo hacer búsqueda global si el término de búsqueda actual coincide
+    if (searchValue !== searchTerm) {
+      return;
+    }
+
+    const startTime = Date.now();
+    setGlobalSearching(true);
+    setIsGlobalSearch(true);
+    setDebugInfo(prev => ({ 
+      ...prev, 
+      totalFetched: 0, 
+      pagesRequested: 1, 
+      apiCalls: [{
+        page: 1,
+        status: 'iniciando búsqueda con parámetro search',
+        searchTerm: searchValue,
+        method: 'API_SEARCH_ENDPOINT'
+      }],
+      lastSearchTime: new Date().toLocaleTimeString()
+    }));
+
+    try {
+      // ✅ USAR EL ENDPOINT DE BÚSQUEDA DE TU API con limit alto para obtener TODOS los resultados
+      const searchUrl = `/api/participantes?search=${encodeURIComponent(searchValue)}&limit=10000&offset=0`;
+      
+      // Actualizar debug con URL completa
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [{
+          ...prev.apiCalls[0],
+          url: searchUrl,
+          status: 'enviando petición...'
+        }]
+      }));
+
+      const response = await fetch(searchUrl);
+      
+      // Debug: información de respuesta
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [{
+          ...prev.apiCalls[0],
+          httpStatus: response.status,
+          responseOk: response.ok,
+          contentType: response.headers.get('content-type'),
+          status: response.ok ? 'respuesta recibida' : `HTTP Error ${response.status}`
+        }]
+      }));
+
+      if (response.ok) {
+        // Verificar si la respuesta es JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(`Respuesta no es JSON. Content-Type: ${contentType}`);
+        }
+
+        const data = await response.json();
+        const searchResults = data.participantes || [];
+        
+        // Actualizar debug: búsqueda completada
+        const endTime = Date.now();
+        setDebugInfo(prev => ({ 
+          ...prev,
+          totalFetched: searchResults.length,
+          filteredResults: searchResults.length,
+          searchDuration: endTime - startTime,
+          isComplete: true,
+          apiCalls: [{
+            ...prev.apiCalls[0],
+            status: 'exitoso - búsqueda directa en API',
+            received: searchResults.length,
+            searchInDatabase: true,
+            totalInDatabase: data.total,
+            method: 'API_SEARCH_ENDPOINT'
+          }]
+        }));
+
+        // ✅ Los resultados ya vienen filtrados desde la API, no necesitamos filtrar en el cliente
+        if (searchValue === searchTerm) {
+          setFilteredParticipantes(searchResults);
+        }
+        
+      } else {
+        // Intentar leer la respuesta como texto para debug
+        let errorText = 'Error desconocido';
+        try {
+          errorText = await response.text();
+        } catch (e) {
+          errorText = `No se pudo leer respuesta: ${e.message}`;
+        }
+        
+        // Si falla la búsqueda, hacer fallback al método anterior (obtener todo y filtrar)
+        setDebugInfo(prev => ({ 
+          ...prev,
+          apiCalls: [{
+            ...prev.apiCalls[0],
+            status: 'error en búsqueda API, usando fallback',
+            error: `HTTP ${response.status}`,
+            errorDetails: errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''),
+            fallback: true
+          }]
+        }));
+        
+        // Fallback: obtener todos los datos y filtrar localmente
+        await performFallbackSearch(searchValue, startTime);
+      }
+
+    } catch (error) {
+      // Debug mejorado para errores
+      let errorDetails = error.message;
+      if (error.message.includes('Unexpected token')) {
+        errorDetails = 'Respuesta HTML en lugar de JSON - probablemente error 404 o servidor mal configurado';
+      }
+
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [{
+          ...prev.apiCalls[0],
+          status: 'error en búsqueda API, usando fallback',
+          error: error.message,
+          errorType: error.name,
+          errorDetails: errorDetails,
+          fallback: true
+        }]
+      }));
+      
+      // Fallback en caso de error
+      await performFallbackSearch(searchValue, startTime);
+    } finally {
+      setGlobalSearching(false);
+    }
+  };
+
+  // Método fallback: obtener todos los datos y filtrar localmente (como antes)
+  const performFallbackSearch = async (searchValue, startTime) => {
+    try {
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [...prev.apiCalls, {
+          page: 'fallback',
+          status: 'iniciando fallback - obteniendo todos los datos',
+          limit: totalParticipantes,
+          method: 'FALLBACK_GET_ALL'
+        }]
+      }));
+
+      const fallbackUrl = `/api/participantes?limit=${Math.max(10000, totalParticipantes || 5000)}&offset=0`;
+      
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [...prev.apiCalls, {
+          page: 'fallback',
+          status: 'enviando petición fallback',
+          url: fallbackUrl,
+          method: 'FALLBACK_GET_ALL'
+        }]
+      }));
+
+      const response = await fetch(fallbackUrl);
+
+      if (response.ok) {
+        // Verificar content-type también en fallback
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(`Fallback: Respuesta no es JSON. Content-Type: ${contentType}`);
+        }
+
+        const data = await response.json();
+        let allResults = data.participantes || [];
+        
+        // Si necesita más páginas para obtener todos los datos
+        if (allResults.length < totalParticipantes && allResults.length > 0) {
+          const totalPages = Math.ceil(totalParticipantes / allResults.length);
+          
+          for (let page = 1; page < Math.min(totalPages, 10); page++) {
+            const pageResponse = await fetch(`/api/participantes?limit=300&offset=${page * 300}`);
+            if (pageResponse.ok) {
+              const pageData = await pageResponse.json();
+              const pageParticipantes = pageData.participantes || [];
+              allResults.push(...pageParticipantes);
+              
+              if (pageParticipantes.length === 0) break;
+            }
+          }
+        }
+        
+        // Filtrar localmente
+        const filteredResults = allResults.filter(p => {
+          const searchLower = searchValue.toLowerCase();
+          return p.nombre.toLowerCase().includes(searchLower) ||
+                 p.numero_asignado.toLowerCase().includes(searchLower) ||
+                 p.telefono.includes(searchValue);
+        });
+
+        const endTime = Date.now();
+        setDebugInfo(prev => ({ 
+          ...prev,
+          totalFetched: allResults.length,
+          filteredResults: filteredResults.length,
+          searchDuration: endTime - startTime,
+          isComplete: true,
+          apiCalls: [...prev.apiCalls, {
+            page: 'fallback-complete',
+            status: 'fallback completado - filtrado local',
+            received: allResults.length,
+            filtered: filteredResults.length,
+            method: 'FALLBACK_LOCAL_FILTER'
+          }]
+        }));
+
+        if (searchValue === searchTerm) {
+          setFilteredParticipantes(filteredResults);
+        }
+      }
+    } catch (fallbackError) {
+      setDebugInfo(prev => ({ 
+        ...prev,
+        apiCalls: [...prev.apiCalls, {
+          page: 'fallback-error',
+          status: 'error en fallback',
+          error: fallbackError.message,
+          method: 'FALLBACK_ERROR'
+        }]
+      }));
+      
+      if (searchValue === searchTerm) {
+        setFilteredParticipantes([]);
+      }
+    }
+  };
+
+  // Manejar cambios en el campo de búsqueda con debounce
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setIsGlobalSearch(false);
+      setFilteredParticipantes(participantes);
+      return;
+    }
+
+    // SOLO hacer búsqueda global - eliminamos la búsqueda local que causa conflictos
+    const timeoutId = setTimeout(() => {
+      performGlobalSearch(searchTerm);
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+  };
+
   const clearSearch = () => {
     setSearchTerm('');
     setIsGlobalSearch(false);
     setFilteredParticipantes(participantes);
+    setDebugInfo({ totalFetched: 0, pagesRequested: 0, apiCalls: [], lastSearchTime: null });
   };
 
   const stats = {
@@ -127,6 +394,70 @@ const AttendanceView = ({ onBack }) => {
                 <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Actualizar</span>
                 <span className="sm:hidden">↻</span>
+              </button>
+              
+              <button
+                onClick={async () => {
+                  console.log('🔧 === DIAGNÓSTICO COMPLETO ===');
+                  console.log('📍 Ubicación:', window.location.href);
+                  console.log('🌐 Entorno:', {
+                    DEV: import.meta.env.DEV,
+                    PROD: import.meta.env.PROD,
+                    MODE: import.meta.env.MODE
+                  });
+                  
+                  // Test de conectividad básica
+                  const tests = [
+                    { name: '🏠 Health Check', url: '/api/health' },
+                    { name: '📊 Status', url: '/api/status' },
+                    { name: '👥 Participantes (1)', url: '/api/participantes?limit=1' },
+                    { name: '🔢 Total', url: '/api/total_participantes' },
+                    { name: '🔍 Búsqueda Test', url: '/api/participantes?search=test&limit=1' }
+                  ];
+                  
+                  for (const test of tests) {
+                    try {
+                      console.log(`\n🧪 ${test.name}`);
+                      console.log(`   URL: ${test.url}`);
+                      
+                      const start = Date.now();
+                      const response = await fetch(test.url);
+                      const duration = Date.now() - start;
+                      
+                      console.log(`   ⏱️  ${duration}ms`);
+                      console.log(`   📡 ${response.status} ${response.statusText}`);
+                      console.log(`   📄 Content-Type: ${response.headers.get('content-type')}`);
+                      
+                      if (response.ok) {
+                        try {
+                          const data = await response.json();
+                          console.log(`   ✅ JSON OK - Keys:`, Object.keys(data));
+                          if (data.participantes) {
+                            console.log(`   👥 ${data.participantes.length} participantes`);
+                          }
+                        } catch (e) {
+                          console.log(`   ❌ JSON Parse Error:`, e.message);
+                          const text = await response.text();
+                          console.log(`   📝 Raw response:`, text.substring(0, 200));
+                        }
+                      } else {
+                        const errorText = await response.text();
+                        console.log(`   ❌ Error:`, errorText.substring(0, 200));
+                      }
+                    } catch (error) {
+                      console.log(`   💥 Network Error:`, error.message);
+                    }
+                    
+                    // Pausa entre tests
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                  }
+                  
+                  console.log('\n🔧 === DIAGNÓSTICO COMPLETO ===');
+                  alert('Diagnóstico completado - revisa la consola del navegador (F12)');
+                }}
+                className="flex items-center px-2 sm:px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg sm:rounded-xl transition-all duration-300 text-xs sm:text-sm"
+              >
+                🔧<span className="hidden sm:inline ml-1">Test</span>
               </button>
             </div>
           </div>
@@ -197,9 +528,15 @@ const AttendanceView = ({ onBack }) => {
               }`} />
               <input
                 type="text"
-                placeholder="Buscar..."
+                placeholder={
+                  globalSearching 
+                    ? "Buscando en toda la base de datos..." 
+                    : isGlobalSearch 
+                      ? "Resultados globales - Edite para buscar nuevamente" 
+                      : "Buscar por nombre, número o teléfono en toda la base de datos..."
+                }
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className={`w-full pl-9 sm:pl-10 pr-16 sm:pr-20 py-2 sm:py-3 bg-blue-950/60 border rounded-lg sm:rounded-xl text-sm sm:text-base text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
                   isGlobalSearch 
                     ? 'border-blue-500 focus:border-blue-400 focus:ring-blue-500/20' 
@@ -214,6 +551,13 @@ const AttendanceView = ({ onBack }) => {
                 >
                   <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
+              )}
+              {isGlobalSearch && (
+                <div className="absolute right-10 top-1/2 transform -translate-y-1/2">
+                  <div className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
+                    Global
+                  </div>
+                </div>
               )}
             </div>
             
@@ -293,72 +637,104 @@ const AttendanceView = ({ onBack }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredParticipantes.map((participante, index) => (
-                      <tr
-                        key={participante.id}
-                        className={`hover:bg-blue-950/50 transition-colors ${index % 2 === 0 ? 'bg-blue-950/20' : ''}`}
-                      >
-                        <td className="px-6 py-4 border-b border-blue-800/20">
-                          <button
-                            onClick={() => toggleAsistencia(participante.id)}
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
-                              participante.asistio
-                                ? 'bg-green-500 hover:bg-green-600'
-                                : 'bg-gray-600 hover:bg-gray-700'
-                            }`}
-                          >
-                            {participante.asistio ? (
-                              <CheckCircle className="w-6 h-6 text-white" />
-                            ) : (
-                              <XCircle className="w-6 h-6 text-gray-400" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4 border-b border-blue-800/20">
-                          <div className="font-mono text-lg font-bold text-blue-400">
-                            {participante.numero_asignado}
+                    {filteredParticipantes.length === 0 && isGlobalSearch && !globalSearching ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center">
+                            <Search className="w-12 h-12 text-gray-500 mb-4" />
+                            <h3 className="text-lg font-medium text-gray-300 mb-2">
+                              No se encontraron resultados
+                            </h3>
+                            <p className="text-gray-400 mb-4">
+                              No hay participantes que coincidan con "{searchTerm}"
+                            </p>
+                            <button
+                              onClick={clearSearch}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                            >
+                              Limpiar búsqueda
+                            </button>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 border-b border-blue-800/20">
-                          <div className="font-semibold text-gray-100">
-                            {participante.nombre}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 border-b border-blue-800/20">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            participante.sexo === 'Masculino'
-                              ? 'bg-blue-500/20 text-blue-300'
-                              : 'bg-pink-500/20 text-pink-300'
-                          }`}>
-                            {participante.sexo}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 border-b border-blue-800/20 text-gray-300">
-                          {participante.sector_profesional}
-                        </td>
-                        <td className="px-6 py-4 border-b border-blue-800/20 font-mono text-gray-300">
-                          {participante.telefono}
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredParticipantes.map((participante, index) => (
+                        <tr
+                          key={participante.id}
+                          className={`hover:bg-blue-950/50 transition-colors ${index % 2 === 0 ? 'bg-blue-950/20' : ''}`}
+                        >
+                          <td className="px-6 py-4 border-b border-blue-800/20">
+                            <button
+                              onClick={() => toggleAsistencia(participante.id)}
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                                participante.asistio
+                                  ? 'bg-green-500 hover:bg-green-600'
+                                  : 'bg-gray-600 hover:bg-gray-700'
+                              }`}
+                            >
+                              {participante.asistio ? (
+                                <CheckCircle className="w-6 h-6 text-white" />
+                              ) : (
+                                <XCircle className="w-6 h-6 text-gray-400" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 border-b border-blue-800/20">
+                            <div className="font-mono text-lg font-bold text-blue-400">
+                              {participante.numero_asignado}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 border-b border-blue-800/20">
+                            <div className="font-semibold text-gray-100">
+                              {participante.nombre}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 border-b border-blue-800/20">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              participante.sexo === 'Masculino'
+                                ? 'bg-blue-500/20 text-blue-300'
+                                : 'bg-pink-500/20 text-pink-300'
+                            }`}>
+                              {participante.sexo}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 border-b border-blue-800/20 text-gray-300">
+                            {participante.sector_profesional}
+                          </td>
+                          <td className="px-6 py-4 border-b border-blue-800/20 font-mono text-gray-300">
+                            {participante.telefono}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
 
               {/* Vista Mobile/Tablet - Cards */}
               <div className="lg:hidden divide-y divide-blue-800/20">
-                {filteredParticipantes.length === 0 ? (
+                {filteredParticipantes.length === 0 && isGlobalSearch && !globalSearching ? (
                   <div className="p-8 text-center">
                     <Search className="w-10 h-10 text-gray-500 mx-auto mb-3" />
                     <h3 className="text-base font-medium text-gray-300 mb-2">
                       No se encontraron resultados
                     </h3>
+                    <p className="text-gray-400 mb-4 text-sm">
+                      No hay participantes que coincidan con "{searchTerm}"
+                    </p>
                     <button
                       onClick={clearSearch}
                       className="mt-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
                     >
                       Limpiar búsqueda
                     </button>
+                  </div>
+                ) : filteredParticipantes.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Users className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                    <h3 className="text-base font-medium text-gray-300">
+                      No hay participantes en esta página
+                    </h3>
                   </div>
                 ) : (
                   filteredParticipantes.map((participante) => (
