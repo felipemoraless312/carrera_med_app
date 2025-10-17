@@ -108,7 +108,7 @@ const RegistrationSection = ({ setActiveSection }) => {
               </div>
               <div className="mt-8 space-y-4">
                 <button
-                  onClick={handleShowRegistrationForm}
+                  //onClick={handleShowRegistrationForm}
                   className="group w-full bg-blue-700 hover:bg-blue-800 text-gray-100 py-5 px-6 rounded-2xl text-xl font-black transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-blue-900/40 relative overflow-hidden"
                 >
                   Registrarse Ahora
