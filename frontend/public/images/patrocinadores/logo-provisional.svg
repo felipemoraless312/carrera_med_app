@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Logo provisional">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="100" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="76" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.30)" stroke-width="2"/>
+  <text x="50%" y="52%" text-anchor="middle" font-size="42" font-family="Arial, Helvetica, sans-serif" font-weight="700" fill="#E2E8F0" dominant-baseline="middle">LOGO</text>
+</svg>
