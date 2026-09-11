@@ -86,7 +86,7 @@ const HeroSection = ({ setActiveSection }) => {
               </h1>
             </div>
             <span className="block text-3xl md:text-5xl lg:text-6xl font-bold text-blue-200">
-              2025
+              2026
             </span>
             <p className="text-xl md:text-2xl lg:text-3xl mb-8 font-light text-blue-100">
               La constancia y perseverancia en el ejercicio dan más vida a tus años, y años a tu vida.
