@@ -34,7 +34,7 @@ const useCountdown = (targetDate) => {
 
 const HeroSection = ({ setActiveSection }) => {
   const navigate = useNavigate();
-  const eventDate = '2026-10-17T07:00:00';
+  const eventDate = '2026-10-24T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
 
