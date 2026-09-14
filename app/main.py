@@ -7,8 +7,9 @@ import sqlite3
 import os
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from PIL import Image, ImageDraw, ImageFont
+import qrcode
 import tempfile
 from io import BytesIO
 import pathlib
@@ -17,12 +18,21 @@ import pathlib
 MAX_REGISTROS = 2000
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
-BASE_IMG_PATH = 'app/carrera_medico_template.png'
+BASE_IMG_PATH = 'app/plantilla_nueva.png'
+
+# Fuentes propias (empaquetadas en el repo, no dependen del SO del servidor)
+FONT_BOLD_PATH = 'app/fonts/Poppins-Bold.ttf'
+FONT_REGULAR_PATH = 'app/fonts/Poppins-Regular.ttf'
+
+# Coordenadas detectadas en la plantilla (1080x1920 px)
+QR_BOX = (181, 600, 898, 1317)  # left, top, right, bottom
+NUMERO_POS = (540, 1435)  # centro (x, y)
+NOMBRE_POS = (540, 1555)  # centro (x, y)
 
 # Sectores profesionales (igual que en Gradio)
 SECTORES_SALUD = [
     "Medicina General",
-    "Enfermería", 
+    "Enfermería",
     "Odontología",
     "Fisioterapia",
     "Psicología",
@@ -43,7 +53,7 @@ async def startup_event():
     print("🚀 Iniciando aplicación...")
     crear_tablas()
     print("✅ Base de datos inicializada")
-    
+
     # Verificar estado actual
     puede_registrar, total = verificar_limite_registros()
     print(f"📊 Registros actuales: {total}/{MAX_REGISTROS}")
@@ -73,6 +83,13 @@ class ParticipanteResponse(BaseModel):
     message: str
     imagen_url: Optional[str] = None
 
+class AsistenciaUpdate(BaseModel):
+    asistio: bool
+
+class AsistenciaBulkUpdate(BaseModel):
+    ids: List[int]
+    asistio: bool
+
 # Funciones de base de datos
 def conectar_bd():
     return sqlite3.connect(DB_NAME)
@@ -90,13 +107,32 @@ def crear_tablas():
             id INTEGER PRIMARY KEY,
             nombre TEXT NOT NULL,
             sexo TEXT NOT NULL,
-            telefono TEXT NOT NULL,
+            telefono TEXT NOT NULL UNIQUE,
             sector_profesional TEXT NOT NULL,
             fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            numero_asignado TEXT NOT NULL
+            numero_asignado TEXT NOT NULL,
+            asistio INTEGER NOT NULL DEFAULT 0,
+            fecha_asistencia TIMESTAMP
         )""")
+
+        # Migración para bases de datos ya existentes en producción
+        cursor.execute("PRAGMA table_info(participantes)")
+        columnas = [c[1] for c in cursor.fetchall()]
+        if 'asistio' not in columnas:
+            cursor.execute("ALTER TABLE participantes ADD COLUMN asistio INTEGER NOT NULL DEFAULT 0")
+            print("🔧 Migración: columna 'asistio' agregada")
+        if 'fecha_asistencia' not in columnas:
+            cursor.execute("ALTER TABLE participantes ADD COLUMN fecha_asistencia TIMESTAMP")
+            print("🔧 Migración: columna 'fecha_asistencia' agregada")
+
+        # Índice único de teléfono para bases ya existentes (ALTER TABLE no permite agregar UNIQUE directo)
+        try:
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_telefono_unique ON participantes(telefono)")
+        except Exception as idx_err:
+            print(f"⚠️ No se pudo crear índice único de teléfono (puede haber duplicados existentes): {idx_err}")
+
         con.commit()
-        print("Base de datos creada correctamente")
+        print("Base de datos creada/migrada correctamente")
     except Exception as e:
         print(f"Error al crear tablas: {e}")
     finally:
@@ -106,7 +142,7 @@ def verificar_limite_registros():
     """Verifica si aún se pueden hacer registros"""
     con = conectar_bd()
     cursor = con.cursor()
-    
+
     try:
         cursor.execute("SELECT COUNT(*) FROM participantes")
         total = cursor.fetchone()[0]
@@ -117,59 +153,58 @@ def verificar_limite_registros():
         con.close()
 
 def generar_numero_participante(participante_id: int, nombre: str):
-    """Genera la imagen con el número del participante - CORREGIDA"""
+    """Genera la imagen con el número, nombre y QR del participante"""
     try:
-        # Si existe imagen base personalizada, usarla; si no, crear una imagen simple
+        # Si existe imagen base personalizada, usarla; si no, crear una imagen básica
         if os.path.exists(BASE_IMG_PATH):
-            img = Image.open(BASE_IMG_PATH)
+            img = Image.open(BASE_IMG_PATH).convert('RGB')
         else:
-            # Crear imagen básica si no existe la plantilla (igual que en Gradio)
-            img = Image.new('RGB', (800, 600), color='white')
+            img = Image.new('RGB', (1080, 1920), color='#1a3fd4')
             draw = ImageDraw.Draw(img)
-            
-            # Dibujar borde
-            draw.rectangle([(10, 10), (790, 590)], outline='black', width=5)
-            
-            # Título
-            try:
-                font_titulo = ImageFont.truetype('arial.ttf', 48)
-            except:
-                font_titulo = ImageFont.load_default()
-            
-            draw.text((400, 50), "CARRERA DÍA DEL MÉDICO", font=font_titulo, 
-                     fill='black', anchor='mt')
-        
-        # Preparar el dibujo
+            draw.rectangle([(10, 10), (1070, 1910)], outline='black', width=5)
+
         draw = ImageDraw.Draw(img)
-        
-        # Configurar fuentes
+
+        # --- Generar QR (por ahora solo codifica el número de folio) ---
+        numero_formateado = f"{participante_id:04d}"
+
+        qr = qrcode.QRCode(
+            version=None,  # ajusta automáticamente el tamaño al contenido
+            error_correction=qrcode.constants.ERROR_CORRECT_L,  # baja densidad, escaneo rápido
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(numero_formateado)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+
+        qr_size_original = QR_BOX[2] - QR_BOX[0]
+        qr_size = int(qr_size_original * 0.95)
+        qr_img = qr_img.resize((qr_size, qr_size), Image.LANCZOS)
+
+        # Centrar el QR dentro del recuadro original
+        offset_x = QR_BOX[0] + (qr_size_original - qr_size) // 2
+        offset_y = QR_BOX[1] + (qr_size_original - qr_size) // 2
+        img.paste(qr_img, (offset_x, offset_y))
+
+        # --- Fuentes propias (empaquetadas), con fallback seguro ---
         try:
-            font_numero = ImageFont.truetype('arial.ttf', 120)
-            font_nombre = ImageFont.truetype('arial.ttf', 36)
-        except:
+            font_numero = ImageFont.truetype(FONT_BOLD_PATH, 80)
+            font_nombre = ImageFont.truetype(FONT_REGULAR_PATH, 40)
+        except Exception:
             font_numero = ImageFont.load_default()
             font_nombre = ImageFont.load_default()
-        
-        # Formatear número con ceros a la izquierda
-        numero_formateado = f"{participante_id:04d}"
-        
-        # Posición centrada para el número
-        img_width, img_height = img.size
-        
-        # Dibujar número del participante (más grande)
-        draw.text((img_width//2, img_height//2 - 60), numero_formateado, 
-                 font=font_numero, fill='black', anchor='mm')
-        
-        # Dibujar nombre (debajo del número) - CORREGIDO: color blanco como en Gradio
-        draw.text((img_width//2, img_height//2 + 40), nombre, 
-                 font=font_nombre, fill='white', anchor='mm')
-        
+
+        # --- Número y nombre en las coordenadas de la plantilla ---
+        draw.text(NUMERO_POS, numero_formateado, font=font_numero, fill='white', anchor='mm')
+        draw.text(NOMBRE_POS, nombre, font=font_nombre, fill='white', anchor='mm')
+
         # Guardar imagen en memoria
         img_bytes = BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes.seek(0)
         return img_bytes
-        
+
     except Exception as e:
         print(f"Error al generar imagen: {e}")
         import traceback
@@ -203,6 +238,12 @@ async def get_status():
         "puede_registrar": puede_registrar
     }
 
+@app.get("/api/total_participantes")
+async def total_participantes():
+    """Endpoint ligero para el contador en tiempo real del frontend"""
+    _, total = verificar_limite_registros()
+    return {"total": total}
+
 @app.get("/api/sectores")
 async def get_sectores():
     """Endpoint para obtener los sectores profesionales disponibles"""
@@ -212,74 +253,77 @@ async def get_sectores():
 async def registrar_participante(participante: ParticipanteCreate):
     """Registrar un nuevo participante"""
     print(f"🔵 POST /api/registro recibido: {participante}")  # Debug log
-    
+
     # Validaciones básicas (iguales a Gradio)
-    if not all([participante.nombre.strip(), participante.sexo, 
+    if not all([participante.nombre.strip(), participante.sexo,
                 participante.telefono.strip(), participante.sector_profesional]):
         raise HTTPException(status_code=400, detail="Todos los campos son obligatorios.")
-    
+
     if participante.sexo not in ["Masculino", "Femenino"]:
         raise HTTPException(status_code=400, detail="Debe seleccionar un sexo válido.")
-    
+
     if participante.sector_profesional not in SECTORES_SALUD:
         raise HTTPException(status_code=400, detail="Debe seleccionar un sector profesional válido.")
-    
+
     if len(participante.telefono.strip()) < 10:
         raise HTTPException(status_code=400, detail="El número de teléfono debe tener al menos 10 dígitos.")
-    
+
     # Verificar límite de registros
     puede_registrar, total_actual = verificar_limite_registros()
     if not puede_registrar:
         raise HTTPException(status_code=400, detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
-    
+
     con = conectar_bd()
     cursor = con.cursor()
-    
+
     try:
         # Verificar si ya existe un participante con el mismo teléfono
-        cursor.execute("SELECT nombre FROM participantes WHERE telefono = ?", 
+        cursor.execute("SELECT nombre FROM participantes WHERE telefono = ?",
                       (participante.telefono.strip(),))
         existing = cursor.fetchone()
-        
+
         if existing:
-            raise HTTPException(status_code=400, 
+            raise HTTPException(status_code=400,
                               detail=f"Ya existe un registro con este número de teléfono: {existing[0]}")
-        
+
         # Obtener el próximo ID disponible (igual que en Gradio)
         cursor.execute("SELECT MAX(id) FROM participantes")
         max_id = cursor.fetchone()[0]
         next_id = 1 if max_id is None else max_id + 1
-        
+
         if next_id > MAX_REGISTROS:
-            raise HTTPException(status_code=400, 
+            raise HTTPException(status_code=400,
                               detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
-        
+
         # Crear número formateado
         numero_asignado = f"{next_id:04d}"
-        
+
         # Insertar el nuevo participante
-        cursor.execute("""INSERT INTO participantes 
+        cursor.execute("""INSERT INTO participantes
                          (id, nombre, sexo, telefono, sector_profesional, numero_asignado)
-                         VALUES (?, ?, ?, ?, ?, ?)""", 
-                      (next_id, participante.nombre.strip(), participante.sexo, 
+                         VALUES (?, ?, ?, ?, ?, ?)""",
+                      (next_id, participante.nombre.strip(), participante.sexo,
                        participante.telefono.strip(), participante.sector_profesional, numero_asignado))
-        
+
         con.commit()
         print(f"✅ Participante registrado: {numero_asignado} - {participante.nombre.strip()}")  # Debug log
-        
+
         # La imagen se genera bajo demanda
         imagen_url = f"/api/imagen/{numero_asignado}?nombre={participante.nombre.strip()}"
-        
+
         return ParticipanteResponse(
             id=next_id,
             numero_asignado=numero_asignado,
             message=f"¡Registro exitoso! Tu número es: {numero_asignado}",
             imagen_url=imagen_url
         )
-            
+
     except HTTPException:
         con.rollback()
         raise
+    except sqlite3.IntegrityError:
+        con.rollback()
+        raise HTTPException(status_code=400, detail="Ya existe un registro con este número de teléfono.")
     except Exception as e:
         con.rollback()
         print(f"❌ Error en registro: {str(e)}")  # Debug log
@@ -289,56 +333,51 @@ async def registrar_participante(participante: ParticipanteCreate):
 
 @app.get("/api/imagen/{numero_participante}")
 async def descargar_imagen(numero_participante: str, request: Request):
-    """Descarga la imagen del número de participante - CORREGIDA"""
-    
-    # Obtener el nombre desde la query params
+    """Descarga la imagen del número de participante"""
+
     nombre = request.query_params.get('nombre', None)
-    
+
     if not nombre:
         raise HTTPException(status_code=400, detail="Nombre requerido para generar la imagen")
-    
+
     try:
-        # Validar que el número sea válido
         participant_id = int(numero_participante)
         if participant_id <= 0 or participant_id > MAX_REGISTROS:
             raise HTTPException(status_code=400, detail="Número de participante inválido")
     except ValueError:
         raise HTTPException(status_code=400, detail="Número de participante debe ser numérico")
-    
-    # Verificar que el participante existe en la BD
+
     con = conectar_bd()
     cursor = con.cursor()
-    
+
     try:
         cursor.execute("SELECT nombre FROM participantes WHERE numero_asignado = ?", (numero_participante,))
         participante = cursor.fetchone()
-        
+
         if not participante:
             raise HTTPException(status_code=404, detail="Participante no encontrado")
-        
-        # Usar el nombre real de la BD, no el del query param
+
         nombre_real = participante[0]
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error al verificar participante")
     finally:
         con.close()
-    
-    # Generar imagen en memoria con el nombre real
+
     img_bytes = generar_numero_participante(participant_id, nombre_real)
-    
+
     if not img_bytes:
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
-    
+
     filename = f"participante_{numero_participante}_{nombre_real.replace(' ', '_')}.png"
-    
-    # Debug logging
+
     print(f"Generando imagen para: {numero_participante} - {nombre_real}")
-    print(f"Tamaño del archivo: {img_bytes.tell() if hasattr(img_bytes, 'tell') else 'unknown'} bytes")
-    
+
     return StreamingResponse(
-        img_bytes, 
-        media_type='image/png', 
+        img_bytes,
+        media_type='image/png',
         headers={
             "Content-Disposition": f"attachment; filename={filename}",
             "Content-Type": "image/png"
@@ -346,23 +385,32 @@ async def descargar_imagen(numero_participante: str, request: Request):
     )
 
 @app.get("/api/participantes")
-async def listar_participantes(limit: int = 100, offset: int = 0):
-    """Lista los participantes registrados (para administración)"""
+async def listar_participantes(limit: int = 100, offset: int = 0, search: Optional[str] = None):
+    """Lista los participantes registrados, con búsqueda opcional (para administración)"""
     con = conectar_bd()
     cursor = con.cursor()
-    
+
     try:
-        cursor.execute("""SELECT id, nombre, sexo, telefono, sector_profesional, 
-                         fecha_registro, numero_asignado 
-                         FROM participantes 
-                         ORDER BY fecha_registro DESC 
-                         LIMIT ? OFFSET ?""", (limit, offset))
-        
-        participantes = cursor.fetchall()
-        
-        cursor.execute("SELECT COUNT(*) FROM participantes")
+        base_query = "FROM participantes WHERE 1=1"
+        params = []
+
+        if search and search.strip():
+            base_query += " AND (nombre LIKE ? OR telefono LIKE ? OR numero_asignado LIKE ?)"
+            like_term = f"%{search.strip()}%"
+            params.extend([like_term, like_term, like_term])
+
+        cursor.execute(f"SELECT COUNT(*) {base_query}", params)
         total = cursor.fetchone()[0]
-        
+
+        cursor.execute(
+            f"""SELECT id, nombre, sexo, telefono, sector_profesional,
+                fecha_registro, numero_asignado, asistio, fecha_asistencia
+                {base_query}
+                ORDER BY fecha_registro DESC LIMIT ? OFFSET ?""",
+            params + [limit, offset]
+        )
+        participantes = cursor.fetchall()
+
         return {
             "participantes": [
                 {
@@ -372,7 +420,9 @@ async def listar_participantes(limit: int = 100, offset: int = 0):
                     "telefono": p[3],
                     "sector_profesional": p[4],
                     "fecha_registro": p[5],
-                    "numero_asignado": p[6]
+                    "numero_asignado": p[6],
+                    "asistio": bool(p[7]),
+                    "fecha_asistencia": p[8]
                 }
                 for p in participantes
             ],
@@ -382,6 +432,98 @@ async def listar_participantes(limit: int = 100, offset: int = 0):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener participantes: {str(e)}")
+    finally:
+        con.close()
+
+@app.get("/api/participantes/buscar")
+async def buscar_participante(tipo: str, valor: str):
+    """Busca un participante por número de folio, teléfono o nombre"""
+    columnas_validas = {"numero": "numero_asignado", "telefono": "telefono", "nombre": "nombre"}
+    if tipo not in columnas_validas:
+        raise HTTPException(status_code=400, detail="Tipo de búsqueda inválido")
+
+    con = conectar_bd()
+    cursor = con.cursor()
+    try:
+        columna = columnas_validas[tipo]
+        operador = "=" if tipo != "nombre" else "LIKE"
+        valor_busqueda = valor if tipo != "nombre" else f"%{valor}%"
+
+        cursor.execute(
+            f"""SELECT id, nombre, sexo, telefono, sector_profesional,
+                fecha_registro, numero_asignado, asistio, fecha_asistencia
+                FROM participantes WHERE {columna} {operador} ?""",
+            (valor_busqueda,)
+        )
+        resultado = cursor.fetchone()
+
+        if not resultado:
+            raise HTTPException(status_code=404, detail="Participante no encontrado")
+
+        return {
+            "id": resultado[0],
+            "nombre": resultado[1],
+            "sexo": resultado[2],
+            "telefono": resultado[3],
+            "sector_profesional": resultado[4],
+            "fecha_registro": resultado[5],
+            "numero_asignado": resultado[6],
+            "asistio": bool(resultado[7]),
+            "fecha_asistencia": resultado[8]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al buscar participante: {str(e)}")
+    finally:
+        con.close()
+
+@app.patch("/api/participantes/{participante_id}/asistencia")
+async def actualizar_asistencia(participante_id: int, data: AsistenciaUpdate):
+    """Marca o desmarca la asistencia de un participante (ej. al escanear su QR)"""
+    con = conectar_bd()
+    cursor = con.cursor()
+    try:
+        cursor.execute("SELECT id FROM participantes WHERE id = ?", (participante_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Participante no encontrado")
+
+        fecha = datetime.now().isoformat() if data.asistio else None
+        cursor.execute(
+            "UPDATE participantes SET asistio = ?, fecha_asistencia = ? WHERE id = ?",
+            (1 if data.asistio else 0, fecha, participante_id)
+        )
+        con.commit()
+        return {"id": participante_id, "asistio": data.asistio, "message": "Asistencia actualizada"}
+    except HTTPException:
+        con.rollback()
+        raise
+    except Exception as e:
+        con.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar asistencia: {str(e)}")
+    finally:
+        con.close()
+
+@app.patch("/api/participantes/asistencia/bulk")
+async def actualizar_asistencia_masiva(data: AsistenciaBulkUpdate):
+    """Actualiza la asistencia de varios participantes a la vez"""
+    if not data.ids:
+        raise HTTPException(status_code=400, detail="Lista de IDs vacía")
+
+    con = conectar_bd()
+    cursor = con.cursor()
+    try:
+        fecha = datetime.now().isoformat() if data.asistio else None
+        placeholders = ",".join("?" * len(data.ids))
+        cursor.execute(
+            f"UPDATE participantes SET asistio = ?, fecha_asistencia = ? WHERE id IN ({placeholders})",
+            [1 if data.asistio else 0, fecha] + data.ids
+        )
+        con.commit()
+        return {"actualizados": cursor.rowcount, "asistio": data.asistio}
+    except Exception as e:
+        con.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en actualización masiva: {str(e)}")
     finally:
         con.close()
 

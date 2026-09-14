@@ -11,6 +11,7 @@
     display: inline-block;
   }
 }
+@reference "tailwindcss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

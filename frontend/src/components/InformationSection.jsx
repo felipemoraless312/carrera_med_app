@@ -1,9 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Trophy, Calendar, Users, Route} from 'lucide-react';
+import { Clock, MapPin, Trophy, Calendar, Users, Route } from 'lucide-react';
 
 const InformationSection = () => {
   const navigate = useNavigate();
+
+  const handleRegistro = () => {
+    navigate('/registro');
+  };
+
   const categories = [
     { 
       name: 'Varonil', 
@@ -28,272 +33,148 @@ const InformationSection = () => {
   const schedule = [
     { time: '6:00 AM', activity: 'LLegada al punto de encuentro', icon: Calendar, color: 'text-blue-500' },
     { time: '7:00 AM', activity: 'Salida oficial de la carrera', icon: Users, color: 'text-green-500' },
-    { time: '10:00 AM', activity: 'Premiación', icon: Trophy, color: 'text-yellow-500' }
+    { time: '09:00 AM', activity: 'Premiación', icon: Trophy, color: 'text-yellow-500' }
   ];
 
-    return (
-      <>
-        <section className="py-20 bg-blue-950 min-h-screen">
-          <div className="container mx-auto px-4">
-        {/* Header con efectos */}
-        <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-4xl md:text-5xl font-black text-gray-100 mb-4">
-            Información del Evento
-          </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Todo lo que necesitas saber para participar en la carrera más importante 
-            del sector salud en Chiapas
-          </p>
-        </div>
-        
-        {/* Horarios y Ubicación con efectos */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-16">
-          {/* Horarios */}
-          <div className="group animate-slide-in-left">
-            <div className="bg-blue-900/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2 border border-blue-900/40">
-              <div className="flex items-center mb-6">
-                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-4 rounded-2xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Clock className="w-6 h-6 text-white" />
+  return (
+    <>
+      {/* ============ INFORMACIÓN ============ */}
+      <section className="py-12 md:py-20 bg-blue-950">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10 md:mb-16">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-gray-100 mb-3">
+              Información del Evento
+            </h2>
+            <p className="text-sm sm:text-lg text-gray-300 max-w-2xl mx-auto">
+              Todo lo que necesitas saber para participar en la carrera más importante del sector
+              salud en Chiapas
+            </p>
+          </div>
+
+          {/* Programación y Ubicación */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-10 md:mb-16">
+            <div className="bg-blue-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-5 sm:p-8 border border-blue-900/40">
+              <div className="flex items-center mb-5">
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-3 rounded-xl mr-3 shadow-lg">
+                  <Clock className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-100 group-hover:text-blue-400 transition-colors duration-300">
-                  Programación
-                </h3>
+                <h3 className="text-lg sm:text-2xl font-bold text-gray-100">Programación</h3>
               </div>
-              
-              <div className="space-y-4">
-                {schedule.map((item, index) => {
-                  const IconComponent = item.icon;
+              <div className="space-y-3">
+                {schedule.map((item) => {
+                  const Icon = item.icon;
                   return (
-                    <div 
-                      key={index} 
-                      className="flex items-center p-4 bg-blue-950 rounded-2xl hover:bg-blue-900 transition-all duration-300 transform hover:scale-105 border border-blue-900/40 hover:border-blue-800"
-                      style={{ animationDelay: `${index * 0.2}s` }}
+                    <div
+                      key={item.time}
+                      className="flex items-center p-3 bg-blue-950 rounded-xl border border-blue-900/40"
                     >
-                      <div className="bg-white p-3 rounded-xl shadow-md mr-4 group-hover:shadow-lg transition-shadow duration-300">
-                        <IconComponent className={`w-5 h-5 ${item.color}`} />
+                      <div className="bg-white p-2.5 rounded-lg shadow-md mr-3">
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-black text-blue-400 text-lg">{item.time}</div>
-                        <div className="text-gray-300 font-medium">{item.activity}</div>
+                        <div className="font-black text-blue-400 text-base sm:text-lg">
+                          {item.time}
+                        </div>
+                        <div className="text-gray-300 text-sm sm:text-base">{item.activity}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-          </div>
 
-          {/* Ubicación */}
-          <div className="group animate-slide-in-right">
-            <div className="bg-blue-900/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-2 border border-blue-900/40">
-              <div className="flex items-center mb-6">
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 rounded-2xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <MapPin className="w-6 h-6 text-white" />
+            <div className="bg-blue-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-5 sm:p-8 border border-blue-900/40">
+              <div className="flex items-center mb-5">
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-3 rounded-xl mr-3 shadow-lg">
+                  <MapPin className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-100 group-hover:text-blue-400 transition-colors duration-300">
-                  Punto de Encuentro
-                </h3>
+                <h3 className="text-lg sm:text-2xl font-bold text-gray-100">Punto de Encuentro</h3>
               </div>
-              
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-start">
-                  <MapPin className="w-5 h-5 text-green-600 mt-1 mr-3 flex-shrink-0 animate-pulse" />
+                  <MapPin className="w-5 h-5 text-green-500 mt-1 mr-3 flex-shrink-0" />
                   <div>
-                    <div className="font-bold text-gray-100 text-lg">Parque Central</div>
-                    <div className="text-gray-400">Tuxtla Gutiérrez, Chiapas</div>
+                    <div className="font-bold text-gray-100 text-base sm:text-lg">
+                      Parque Central
+                    </div>
+                    <div className="text-gray-400 text-sm sm:text-base">
+                      Tuxtla Gutiérrez, Chiapas
+                    </div>
                   </div>
                 </div>
-                
-                <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900/40 hover:border-blue-800 transition-all duration-300">
-                  <h4 className="font-bold text-gray-100 mb-3 flex items-center">
-                    <Route className="w-4 h-4 mr-2 text-blue-400 animate-pulse" />
+                <div className="bg-blue-950 p-4 sm:p-6 rounded-xl border border-blue-900/40">
+                  <h4 className="font-bold text-gray-100 mb-2 flex items-center text-sm sm:text-base">
+                    <Route className="w-4 h-4 mr-2 text-blue-400" />
                     Recorrido:
                   </h4>
-                  <p className="text-gray-300 leading-relaxed">
-                    Salida desde el Parque Central, recorriendo la principal avenida
-                    de la ciudad, pasando por el parque de la marimba, Hotel Bonampak
-                    entrando al parque cañahueca, y por último su pista de atletismo.
+                  <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
+                    Salida desde el Parque Central, recorriendo la principal avenida de la ciudad,
+                    pasando por el parque de la marimba, Hotel Bonampak entrando al parque
+                    cañahueca, y por último su pista de atletismo.
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Categorías con efectos mejorados */}
-        <div className="mb-16">
-          <div className="text-center mb-12 animate-fade-in delay-500">
-            <h3 className="text-3xl md:text-4xl font-black text-gray-100 mb-4">
-              Categorías de Participación
-            </h3>
-            <p className="text-lg text-gray-300">
-              Elige la distancia que mejor se adapte a tu nivel
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {categories.map((category, index) => {
-              const IconComponent = category.icon;
-              return (
-                <div key={index} className="group animate-zoom-in" style={{ animationDelay: `${index * 0.2}s` }}>
-                  <div className="bg-blue-900/90 backdrop-blur-lg rounded-3xl shadow-2xl p-8 text-center hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-4 hover:scale-105 border border-blue-900/40">
-                    {/* Icono */}
-                    <div className="relative mb-6">
-                      <div className="w-20 h-20 bg-blue-800 rounded-full flex items-center justify-center mx-auto group-hover:scale-125 transition-all duration-500 shadow-2xl">
-                        <IconComponent className="w-10 h-10 text-blue-400 group-hover:animate-pulse" />
-                      </div>
-                    </div>
-                    {/* Contenido */}
-                    <h4 className="text-2xl font-black mb-3 text-gray-100 group-hover:text-blue-400 transition-all duration-300">
-                      {category.name}
-                    </h4>
-                    <p className="text-gray-300 mb-4 text-lg font-medium">
-                      {category.description}
-                    </p>
-                    <p className="text-sm text-gray-400 mb-6 font-semibold">
-                      {category.participants} 
-                    </p>
-                    {/* Precio */}
-                    <div className="text-3xl font-black text-blue-400 mb-6 group-hover:animate-pulse">
-                      {category.price}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Momentos Memorables */}
-        <div className="mb-16">
-          <div className="text-center mb-12 animate-fade-in delay-500">
-            <h3 className="text-3xl md:text-4xl font-black text-gray-100 mb-4">
-              Momentos Memorables
-            </h3>
-            <p className="text-lg text-gray-300">
-              Revive los mejores momentos de carreras anteriores
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {['carreramed.jpg', 'carreramed1.jpg', 'carreramed12.jpg', 'carreramed4.jpg', 'carreramed5.jpg', 'carreramed6.jpg'].map((image, index) => (
-              <div 
-                key={index} 
-                className="group overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-zoom-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="relative h-64 overflow-hidden bg-blue-900">
-                  <img 
-                    src={`/images/carrera/${image}`}
-                    alt={`Momento memorable ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div className="p-4 text-gray-100 font-bold text-center w-full">
-                      Carrera Médico 2026
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Comité */}
-        <div className="mb-16">
-          <div className="text-center mb-12 animate-fade-in delay-500">
-            <h3 className="text-3xl md:text-4xl font-black text-gray-100 mb-4">
-              Comité Organizador
-            </h3>
-            <p className="text-lg text-gray-300">
-              Conoce a algunos de los profesionales detrás de este evento
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {['comite1.jpg', 'comite2.jpg'].map((image, index) => (
-              <div 
-                key={index} 
-                className="group overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 animate-zoom-in"
-                style={{ animationDelay: `${index * 0.2}s` }}
-              >
-                <div className="relative h-80 overflow-hidden bg-blue-900">
-                  <img 
-                    src={`/images/comite/${image}`}
-                    alt={`Miembro del comité ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div className="p-4 text-gray-100 font-bold text-center w-full">
-                      Miembros del Comité
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Call to Action con efectos */}
-        <div className="text-center animate-fade-in delay-1000">
-          <div className="bg-blue-900 rounded-3xl p-12 text-gray-100 shadow-2xl hover:shadow-3xl transition-all duration-500 transform hover:scale-105 relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="text-3xl font-black mb-4">
-                ¿Listo para el desafío?
+          {/* Categorías */}
+          <div className="mb-10 md:mb-16">
+            <div className="text-center mb-6 md:mb-10">
+              <h3 className="text-xl sm:text-3xl font-black text-gray-100 mb-2">
+                Categorías de Participación
               </h3>
-              <p className="text-xl mb-8 opacity-90">
+            </div>
+            <div className="grid sm:grid-cols-2 gap-5">
+              {categories.map((category) => (
+                <div
+                  key={category.name}
+                  className="bg-blue-900/90 backdrop-blur-lg rounded-2xl shadow-xl p-6 text-center border border-blue-900/40"
+                >
+                  <div className="w-16 h-16 bg-blue-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-blue-400" />
+                  </div>
+                  <h4 className="text-xl font-black mb-2 text-gray-100">{category.name}</h4>
+                  <p className="text-gray-300 mb-2 text-sm sm:text-base">{category.description}</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mb-4">{category.participants}</p>
+                  <div className="text-xl sm:text-2xl font-black text-blue-400">
+                    {category.price}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div className="text-center">
+            <div className="bg-blue-900 rounded-2xl p-8 sm:p-12 text-gray-100 shadow-xl">
+              <h3 className="text-xl sm:text-3xl font-black mb-3">¿Listo para el desafío?</h3>
+              <p className="text-sm sm:text-xl mb-6 opacity-90">
                 Únete a la comunidad médica más activa de Chiapas
               </p>
-              <button 
-                onClick={() => navigate('/registro')}
-                className="bg-blue-700 text-gray-100 px-10 py-5 rounded-full text-xl font-black transition-all duration-300 transform hover:scale-110 shadow-xl hover:shadow-blue-900/40">
+              <button
+                onClick={handleRegistro}
+                className="bg-blue-700 text-gray-100 px-8 py-4 sm:px-10 sm:py-5 rounded-full text-base sm:text-xl font-black transition-transform active:scale-95 shadow-xl"
+              >
                 Registrarse Ahora
               </button>
             </div>
           </div>
         </div>
-          </div>
-        </section>
-        <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
+      </section>
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-        
-        @keyframes slide-in-left {
-          from { opacity: 0; transform: translateX(-50px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes slide-in-right {
-          from { opacity: 0; transform: translateX(50px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes zoom-in {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 1s ease-out;
-        }
-        
-        .animate-slide-in-left {
-          animation: slide-in-left 1s ease-out;
-        }
-        
-        .animate-slide-in-right {
-          animation: slide-in-right 1s ease-out;
-        }
-        
-        .animate-zoom-in {
-          animation: zoom-in 0.8s ease-out;
-        }
-        
-        .delay-500 {
-          animation-delay: 0.5s;
-        }
-        
-        .delay-1000 {
-          animation-delay: 1s;
+        .animate-fade-in-up {
+          animation: fade-in-up 0.8s ease-out;
         }
       `}</style>
     </>
