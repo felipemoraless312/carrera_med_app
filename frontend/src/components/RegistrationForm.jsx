@@ -62,11 +62,9 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     setParticipantData(null);
 
     try {
-      console.log('Enviando datos:', formData); // Para debug
 
       // El servicio API ya maneja las validaciones
       const data = await apiService.registrarParticipante(formData);
-      console.log('Respuesta del servidor:', data); // Para debug
 
       // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
       setRegistrationResult({
@@ -115,7 +113,6 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     }
 
     try {
-      console.log('Descargando imagen para:', participantData); // Para debug
       
       // Usar el servicio API para descargar la imagen
       await downloadUtils.downloadParticipantImage(participantData.numero, participantData.nombre);
@@ -232,7 +229,6 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                     role="note"
                     className="mt-4 flex gap-3 rounded-xl border border-amber-300/40 bg-amber-400/10 p-3"
                   >
-                    <Gift className="w-5 h-5 text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
                     <div className="text-sm">
                       <p className="font-black text-amber-200 leading-tight">
                         Recuerde sus datos para la tómbola
