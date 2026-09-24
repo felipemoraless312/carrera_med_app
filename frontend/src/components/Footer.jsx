@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Phone, MapPin, Facebook, Calendar } from 'lucide-react';
+import { Heart, Phone, MapPin, Facebook, Headphones } from 'lucide-react';
 
 // Función de scroll suave
 const scrollToSection = (sectionId, setActiveSection) => {
@@ -11,10 +11,6 @@ const scrollToSection = (sectionId, setActiveSection) => {
 };
 
 const Footer = ({ setActiveSection }) => {
-  const quickLinks = [
-    { name: 'Inicio', id: 'inicio' }
-  ];
-
   const socialLinks = [
     { icon: Facebook, href: '#', color: 'hover:text-blue-500' }
   ];
@@ -24,25 +20,23 @@ const Footer = ({ setActiveSection }) => {
     { icon: MapPin, text: 'Tuxtla Gutiérrez, Chiapas' }
   ];
 
-  const handleLinkClick = (sectionId) => {
-    if (setActiveSection) {
-      scrollToSection(sectionId, setActiveSection);
-    }
-  };
+  const supportInfo = [
+    { icon: Phone, text: '961 610 64 69' }
+  ];
 
   return (
     <footer className="bg-blue-950 text-gray-200 relative overflow-hidden">
       <div className="relative z-10">
         {/* Contenido principal */}
         <div className="container mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
-            
+          <div className="grid md:grid-cols-3 gap-10">
+
             {/* Logo y descripción */}
-            <div className="md:col-span-2">
+            <div>
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 rounded-full">
-                  <img 
-                    src="/images/logo.png" 
+                  <img
+                    src="/images/logo.png"
                     alt="Logo Carrera del Médico"
                     className="w-16 h-16 object-contain"
                     onError={(e) => {
@@ -58,10 +52,10 @@ const Footer = ({ setActiveSection }) => {
                 </div>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed max-w-md">
-                Celebrando la vida, la salud y el compromiso de nuestros profesionales médicos. 
+                Celebrando la vida, la salud y el compromiso de nuestros profesionales médicos.
                 Únete a la comunidad deportiva más importante del sector salud en Chiapas.
               </p>
-              
+
               {/* Redes sociales */}
               <div className="flex space-x-4">
                 {socialLinks.map((social, index) => {
@@ -70,7 +64,7 @@ const Footer = ({ setActiveSection }) => {
                     <a
                       key={index}
                       href={social.href}
-                      className={`bg-blue-900 hover:bg-blue-800 p-3 rounded-full transition-all duration-300 transform hover:scale-110 text-blue-400`}
+                      className="bg-blue-900 hover:bg-blue-800 p-3 rounded-full transition-all duration-300 transform hover:scale-110 text-blue-400"
                     >
                       <IconComponent className="w-5 h-5" />
                     </a>
@@ -79,24 +73,7 @@ const Footer = ({ setActiveSection }) => {
               </div>
             </div>
 
-            {/* Enlaces rápidos */}
-            <div>
-              <h4 className="text-lg font-bold mb-6 text-gray-100"></h4>
-              <ul className="space-y-3">
-                {quickLinks.map((link, index) => (
-                  <li key={index}>
-                    <button 
-                      onClick={() => handleLinkClick(link.id)}
-                      className="text-gray-400 hover:text-blue-400 transition-colors duration-200 flex items-center group cursor-pointer"
-                    >
-
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Información de contacto */}
+            {/* Información de contacto del evento */}
             <div>
               <h4 className="text-lg font-bold mb-6 text-gray-100">Contacto</h4>
               <div className="space-y-4">
@@ -111,23 +88,37 @@ const Footer = ({ setActiveSection }) => {
                     </div>
                   );
                 })}
+                <p className="text-xs text-gray-500 leading-relaxed pt-1">
+                  Para dudas o fallas con tu inscripción o registro en línea.
+                </p>
               </div>
+            </div>
 
-              {/* Próximo evento */}
-              <div className="mt-6 bg-blue-900 rounded-lg p-4">
-                <div className="flex items-center mb-2">
-                  <Calendar className="w-4 h-4 mr-2 text-blue-400" />
-                  <span className="font-semibold text-sm text-gray-100">Próximo Evento</span>
-                </div>
-                <p className="text-sm text-gray-200">17 de Octubre, 2026</p>
-                <p className="text-xs opacity-80 text-gray-400">Parque Central</p>
+            {/* Soluciones tecnológicas */}
+            <div>
+              <h4 className="text-lg font-bold mb-6 text-gray-100">Soluciones Tecnológicas</h4>
+              <div className="space-y-4">
+                {supportInfo.map((contact, index) => {
+                  const IconComponent = contact.icon;
+                  return (
+                    <div key={index} className="flex items-center text-gray-400">
+                      <div className="bg-blue-900 p-2 rounded-lg mr-3">
+                        <IconComponent className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <span className="text-sm">{contact.text}</span>
+                    </div>
+                  );
+                })}
+                <p className="text-xs text-gray-500 leading-relaxed pt-1">
+                  Desarrollo web y soporte técnico del sitio.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Línea divisoria */}
-        <div className="border-t border-blue-900"></div>
+        <div className="h-px bg-gradient-to-r from-transparent via-blue-800/60 to-transparent"></div>
 
         {/* Copyright */}
         <div className="container mx-auto px-4 py-6">
@@ -145,4 +136,3 @@ const Footer = ({ setActiveSection }) => {
 };
 
 export default Footer;
-

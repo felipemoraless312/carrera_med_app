@@ -71,7 +71,7 @@ const HistorySection = () => {
               <div className="bg-blue-950/50 rounded-xl p-4 backdrop-blur-sm">
                 <h4 className="text-lg font-bold text-blue-300 mb-2">1988-2019</h4>
                 <p className="text-blue-200 text-sm">
-                  31 años consecutivos de tradición ininterrumpida
+                  33 años consecutivos de tradición ininterrumpida
                 </p>
               </div>
               <div className="bg-blue-950/50 rounded-xl p-4 backdrop-blur-sm">

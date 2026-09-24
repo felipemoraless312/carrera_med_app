@@ -9,6 +9,7 @@ import {
   Trophy,
   Users,
   Route,
+  Award,
 } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
@@ -146,8 +147,8 @@ const HeroSection = () => {
               </a>
             </div>
 
-            {/* Momentos Memorables + Fechas Importantes */}
-            <div className="grid md:grid-cols-2 gap-4 mb-8 max-w-4xl mx-auto">
+            {/* Momentos Memorables */}
+            <div className="mb-8 max-w-xl mx-auto">
               <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-5 border border-blue-400/20 shadow-2xl">
                 <h3 className="text-base sm:text-xl font-bold mb-3 text-blue-100 text-center">
                   Momentos Memorables
@@ -188,33 +189,6 @@ const HeroSection = () => {
                         }`}
                       />
                     ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-5 border border-blue-400/20 shadow-2xl">
-                <h3 className="text-base sm:text-xl font-bold mb-3 text-blue-100">
-                  Fechas Importantes
-                </h3>
-                <div className="space-y-3">
-                  <div className="bg-blue-800/50 rounded-xl p-3 border border-blue-400/20">
-                    <p className="text-blue-200 font-semibold text-sm mb-1">
-                      Fecha de término de Registro
-                    </p>
-                    <p className="text-white text-sm">22 de Octubre - 23:59 PM</p>
-                  </div>
-                  <div className="bg-blue-800/50 rounded-xl p-3 border border-blue-400/20">
-                    <p className="text-blue-200 font-semibold text-sm mb-1">Entrega de Números</p>
-                    <p className="text-white text-sm">21 al 23 de Octubre · 9:00 AM - 5:30 PM</p>
-                    <a
-                      href="https://maps.app.goo.gl/SzuFcev2roHYynDU8"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-100 transition-colors underline mt-1"
-                    >
-                      <MapPin className="w-3 h-3" />
-                      Ver ubicación en mapa
-                    </a>
                   </div>
                 </div>
               </div>
@@ -278,6 +252,29 @@ const HeroSection = () => {
         </div>
       </div>
 
+      {/* ============ PATROCINADORES Y COMITÉ ORGANIZADOR ============ */}
+      <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-800 py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <button
+            type="button"
+            onClick={() => navigate('/patrocinadores')}
+            className="group flex items-center justify-center gap-3 sm:gap-4 mx-auto max-w-xl w-full bg-blue-900/40 hover:bg-blue-900/60 rounded-full px-5 py-3 sm:px-8 sm:py-4 border border-blue-400/30 transition-colors"
+          >
+            <span className="flex -space-x-2">
+              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-500/40 flex items-center justify-center ring-2 ring-blue-800/60">
+                <Award className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-blue-100" />
+              </span>
+              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-500/40 flex items-center justify-center ring-2 ring-blue-800/60">
+                <Users className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-blue-100" />
+              </span>
+            </span>
+            <span className="text-xs sm:text-base font-semibold text-blue-100 text-center">
+              Conoce a nuestros patrocinadores y comité organizador
+            </span>
+            <ChevronRight className="w-4 h-4 text-blue-200 group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </button>
+        </div>
+      </div>
 
       <style jsx>{`
         @keyframes fade-in-up {

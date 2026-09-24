@@ -30,13 +30,13 @@ const SponsorsSection = () => {
     { name: 'Dr. Tadeo Santoyo Espinosa', position: 'Director de Ingeniería Biomédica', image: '/images/Tadeo.png' },
     { name: 'Dr. Alexander Arroyo Nuñez', position: 'Especialista', image: '/images/alexander.png' },
     { name: 'Dr. Juan Carlos Alvarez Ruiz', position: 'Especialista', image: '/images/juan_carlos.png' },
-    { name: 'Dr. Humberto Rojas', position: 'Especialista', image: '/images/humberto.png' },
-    { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/hernan.png' },
+    { name: 'Dr. Humberto Rojas', position: 'Especialista', image: '/images/humberto_rojas.jpg' },
+    { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/hernan_leon.jpg' },
     { name: 'Dr. Alejandro Bermúdez Montoya', position: 'Especialista', image: '/images/alejandro.png' },
     { name: 'Dr. Eric Torres Reyes', position: 'Especialista', image: '/images/eric.png' }
   ];
 
-  const committeePhotos = ['comite1.jpg', 'comite2.jpg'];
+  const committeePhotos = ['comite3.jpg', 'comite.jpg', 'comite2.jpg'];
 
   const developmentTeam = [
     { name: 'Ing. Cesar Gomez Aguilera', image: '/images/Aguilera.png' },
@@ -121,28 +121,35 @@ const SponsorsSection = () => {
           </div>
 
           {/* Fotografías del Comité */}
-          <div className="grid sm:grid-cols-2 gap-5 mb-12">
-            {committeePhotos.map((image, index) => (
-              <div
-                key={image}
-                className="group overflow-hidden rounded-2xl shadow-xl border border-blue-900/40"
-              >
-                <div className="relative h-56 sm:h-80 overflow-hidden bg-blue-900">
-                  <img
-                    src={`/images/comite/${image}`}
-                    alt={`Miembro del comité ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            <div className="grid sm:grid-cols-2 gap-5 mb-12">
+              {committeePhotos.map((image, index) => {
+                const isLastOdd =
+                committeePhotos.length % 2 !== 0 &&
+                  index === committeePhotos.length - 1;
+
+                      return (
+            <div
+              key={image}
+                className={`group overflow-hidden rounded-2xl shadow-xl border border-blue-900/40 w-full max-w-md mx-auto ${
+                  isLastOdd ? 'sm:col-span-2' : ''
+                    }`}
+            >
+            <div className="relative h-56 sm:h-80 overflow-hidden bg-blue-900">
+              <img
+                src={`/images/comite/${image}`}
+                alt={`Miembro del comité ${index + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div className="p-4 text-gray-100 font-bold text-center w-full">
-                      Miembros del Comité
+                    <div className="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                      <div className="p-4 text-gray-100 font-bold text-center w-full">
+                        Miembros del Comité
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
+                );
+            })}
+        </div>
           {/* Carrusel automático de miembros del comité */}
           <div className="relative overflow-hidden group/committee">
             <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-blue-950 to-transparent z-10" />
@@ -240,7 +247,7 @@ const SponsorsSection = () => {
             </p>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-blue-950/50 rounded-2xl p-6 backdrop-blur-sm">
-                <h4 className="text-lg font-bold text-blue-300 mb-2">31 Años de Historia</h4>
+                <h4 className="text-lg font-bold text-blue-300 mb-2">32 Años de Historia</h4>
                 <p className="text-gray-400 text-sm">
                   Más de tres décadas celebrando la medicina y el deporte
                 </p>
