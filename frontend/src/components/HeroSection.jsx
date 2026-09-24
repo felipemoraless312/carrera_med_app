@@ -46,7 +46,7 @@ const useCountdown = (targetDate) => {
 
 const HeroSection = () => {
   const navigate = useNavigate();
-  const eventDate = '2026-10-24T07:00:00';
+  const eventDate = '2026-10-25T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
 
@@ -134,7 +134,7 @@ const HeroSection = () => {
             <div className="flex flex-col items-center gap-3 mb-6 text-sm sm:text-base">
               <div className="flex items-center gap-2 bg-blue-900/60 px-5 py-2.5 rounded-full backdrop-blur-md border border-blue-400/30">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
-                <span className="font-semibold text-blue-100">24 de Octubre, 2026</span>
+                <span className="font-semibold text-blue-100">25 de Octubre, 2026</span>
               </div>
               <a
                 href="https://share.google/kiqf73sfJqLAGAsp3"
