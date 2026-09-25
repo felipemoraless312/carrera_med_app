@@ -205,13 +205,28 @@ export const apiService = {
         throw new Error('Debe seleccionar un sector profesional');
       }
 
+      if (!participanteData.ciudad?.trim()) {
+        throw new Error('La ciudad es obligatoria');
+      }
+
+      if (!participanteData.telefono_emergencia?.trim() || participanteData.telefono_emergencia.trim().length < 10) {
+        throw new Error('El teléfono de emergencia debe tener al menos 10 dígitos');
+      }
+
+      if (participanteData.telefono_emergencia.trim() === participanteData.telefono.trim()) {
+        throw new Error('El teléfono de emergencia debe ser distinto a su propio teléfono');
+      }
+
       const response = await fetchWithTimeout(buildApiUrl('/api/registro'), {
         method: 'POST',
         body: JSON.stringify({
           nombre: participanteData.nombre.trim(),
           sexo: participanteData.sexo,
           telefono: participanteData.telefono.trim(),
-          sector_profesional: participanteData.sector_profesional
+          sector_profesional: participanteData.sector_profesional,
+          ciudad: participanteData.ciudad.trim(),
+          telefono_emergencia: participanteData.telefono_emergencia.trim(),
+          condiciones_salud: participanteData.condiciones_salud?.trim() || 'Ninguna'
         })
       });
 
@@ -224,6 +239,8 @@ export const apiService = {
       if (error.message.includes('obligatorio') || 
           error.message.includes('seleccionar') || 
           error.message.includes('dígitos') ||
+          error.message.includes('obligatoria') ||
+          error.message.includes('distinto') ||
           error.message.includes('Ya existe') ||
           error.message.includes('límite máximo')) {
         throw error;

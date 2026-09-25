@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, User, Phone, Briefcase, Calendar, Hash, ArrowLeft, Loader2, UserCheck, UserX } from 'lucide-react';
+import { Search, User, Phone, Briefcase, Calendar, MapPin, PhoneCall, HeartPulse, Hash, ArrowLeft, Loader2, UserCheck, UserX } from 'lucide-react';
 import { useParticipantSearch } from '../hooks/useApi';
 //hola
 const GeneralSearchView = ({ onBack }) => {
@@ -252,6 +252,37 @@ const GeneralSearchView = ({ onBack }) => {
                     <span className="text-sm text-gray-400 font-medium">Sector Profesional</span>
                   </div>
                   <p className="text-lg font-bold text-gray-100">{result.sector_profesional}</p>
+                </div>
+
+                {/* Ciudad */}
+                <div className="bg-blue-950/50 rounded-xl p-4 border border-blue-800/30">
+                  <div className="flex items-center mb-2">
+                    <MapPin className="w-5 h-5 text-blue-400 mr-2" />
+                    <span className="text-sm text-gray-400 font-medium">Ciudad</span>
+                  </div>
+                  <p className="text-lg font-bold text-gray-100">{result.ciudad || 'No registrada'}</p>
+                </div>
+
+                {/* Teléfono de emergencia */}
+                <div className="bg-blue-950/50 rounded-xl p-4 border border-blue-800/30">
+                  <div className="flex items-center mb-2">
+                    <PhoneCall className="w-5 h-5 text-blue-400 mr-2" />
+                    <span className="text-sm text-gray-400 font-medium">Contacto de emergencia</span>
+                  </div>
+                  <p className="text-lg font-bold text-gray-100 font-mono">{result.telefono_emergencia || 'No registrado'}</p>
+                </div>
+
+                {/* Condiciones de salud */}
+                <div className={`rounded-xl p-4 border md:col-span-2 ${
+                  result.condiciones_salud && result.condiciones_salud !== 'Ninguna'
+                    ? 'bg-red-900/30 border-red-400/40'
+                    : 'bg-blue-950/50 border-blue-800/30'
+                }`}>
+                  <div className="flex items-center mb-2">
+                    <HeartPulse className="w-5 h-5 text-red-400 mr-2" />
+                    <span className="text-sm text-gray-400 font-medium">Condiciones de salud</span>
+                  </div>
+                  <p className="text-lg font-bold text-gray-100 whitespace-pre-wrap break-words">{result.condiciones_salud || 'No registrado'}</p>
                 </div>
 
                 {/* Fecha de registro */}

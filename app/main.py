@@ -81,6 +81,10 @@ class ParticipanteCreate(BaseModel):
     sexo: str
     telefono: str
     sector_profesional: str
+    # Valores por defecto vacíos para responder con un 400 claro (no un 422) si faltan
+    ciudad: str = ""
+    telefono_emergencia: str = ""
+    condiciones_salud: str = ""
 
 class ParticipanteResponse(BaseModel):
     id: int
@@ -117,7 +121,10 @@ def crear_tablas():
             fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             numero_asignado TEXT NOT NULL,
             asistio INTEGER NOT NULL DEFAULT 0,
-            fecha_asistencia TIMESTAMP
+            fecha_asistencia TIMESTAMP,
+            ciudad TEXT,
+            telefono_emergencia TEXT,
+            condiciones_salud TEXT
         )""")
 
         # Migración para bases de datos ya existentes en producción
@@ -129,6 +136,10 @@ def crear_tablas():
         if 'fecha_asistencia' not in columnas:
             cursor.execute("ALTER TABLE participantes ADD COLUMN fecha_asistencia TIMESTAMP")
             print("🔧 Migración: columna 'fecha_asistencia' agregada")
+        for columna_nueva in ('ciudad', 'telefono_emergencia', 'condiciones_salud'):
+            if columna_nueva not in columnas:
+                cursor.execute(f"ALTER TABLE participantes ADD COLUMN {columna_nueva} TEXT")
+                print(f"🔧 Migración: columna '{columna_nueva}' agregada")
 
         # Índice único de teléfono para bases ya existentes (ALTER TABLE no permite agregar UNIQUE directo)
         try:
@@ -284,6 +295,18 @@ async def registrar_participante(participante: ParticipanteCreate):
     if len(participante.telefono.strip()) < 10:
         raise HTTPException(status_code=400, detail="El número de teléfono debe tener al menos 10 dígitos.")
 
+    if not participante.ciudad.strip():
+        raise HTTPException(status_code=400, detail="La ciudad es obligatoria.")
+
+    telefono_emergencia = participante.telefono_emergencia.strip()
+    if len(telefono_emergencia) < 10:
+        raise HTTPException(status_code=400, detail="El teléfono de emergencia debe tener al menos 10 dígitos.")
+
+    if telefono_emergencia == participante.telefono.strip():
+        raise HTTPException(status_code=400, detail="El teléfono de emergencia debe ser distinto a su propio teléfono.")
+
+    condiciones_salud = participante.condiciones_salud.strip() or "Ninguna"
+
     # Verificar límite de registros
     puede_registrar, total_actual = verificar_limite_registros()
     if not puede_registrar:
@@ -316,10 +339,12 @@ async def registrar_participante(participante: ParticipanteCreate):
 
         # Insertar el nuevo participante
         cursor.execute("""INSERT INTO participantes
-                         (id, nombre, sexo, telefono, sector_profesional, numero_asignado)
-                         VALUES (?, ?, ?, ?, ?, ?)""",
+                         (id, nombre, sexo, telefono, sector_profesional, numero_asignado,
+                          ciudad, telefono_emergencia, condiciones_salud)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                       (next_id, participante.nombre.strip(), participante.sexo,
-                       participante.telefono.strip(), participante.sector_profesional, numero_asignado))
+                       participante.telefono.strip(), participante.sector_profesional, numero_asignado,
+                       participante.ciudad.strip(), telefono_emergencia, condiciones_salud))
 
         con.commit()
         print(f"✅ Participante registrado: {numero_asignado} - {participante.nombre.strip()}")  # Debug log
@@ -411,16 +436,17 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
         params = []
 
         if search and search.strip():
-            base_query += " AND (nombre LIKE ? OR telefono LIKE ? OR numero_asignado LIKE ?)"
+            base_query += " AND (nombre LIKE ? OR telefono LIKE ? OR numero_asignado LIKE ? OR ciudad LIKE ?)"
             like_term = f"%{search.strip()}%"
-            params.extend([like_term, like_term, like_term])
+            params.extend([like_term, like_term, like_term, like_term])
 
         cursor.execute(f"SELECT COUNT(*) {base_query}", params)
         total = cursor.fetchone()[0]
 
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
-                fecha_registro, numero_asignado, asistio, fecha_asistencia
+                fecha_registro, numero_asignado, asistio, fecha_asistencia,
+                ciudad, telefono_emergencia, condiciones_salud
                 {base_query}
                 ORDER BY fecha_registro DESC LIMIT ? OFFSET ?""",
             params + [limit, offset]
@@ -438,7 +464,10 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
                     "fecha_registro": p[5],
                     "numero_asignado": p[6],
                     "asistio": bool(p[7]),
-                    "fecha_asistencia": p[8]
+                    "fecha_asistencia": p[8],
+                    "ciudad": p[9],
+                    "telefono_emergencia": p[10],
+                    "condiciones_salud": p[11]
                 }
                 for p in participantes
             ],
@@ -467,7 +496,8 @@ async def buscar_participante(tipo: str, valor: str):
 
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
-                fecha_registro, numero_asignado, asistio, fecha_asistencia
+                fecha_registro, numero_asignado, asistio, fecha_asistencia,
+                ciudad, telefono_emergencia, condiciones_salud
                 FROM participantes WHERE {columna} {operador} ?""",
             (valor_busqueda,)
         )
@@ -485,7 +515,10 @@ async def buscar_participante(tipo: str, valor: str):
             "fecha_registro": resultado[5],
             "numero_asignado": resultado[6],
             "asistio": bool(resultado[7]),
-            "fecha_asistencia": resultado[8]
+            "fecha_asistencia": resultado[8],
+            "ciudad": resultado[9],
+            "telefono_emergencia": resultado[10],
+            "condiciones_salud": resultado[11]
         }
     except HTTPException:
         raise

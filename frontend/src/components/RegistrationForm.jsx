@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Phone, User, Briefcase, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift } from 'lucide-react';
+import { Users, Phone, User, Briefcase, MapPin, PhoneCall, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift } from 'lucide-react';
 import { apiService, downloadUtils } from '../services/api';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
@@ -8,7 +8,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     nombre: '',
     sexo: '',
     telefono: '',
-    sector_profesional: ''
+    sector_profesional: '',
+    ciudad: '',
+    telefono_emergencia: '',
+    tiene_condicion: '',
+    condiciones_salud: ''
   });
   const [sectoresSalud, setSectoresSalud] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +68,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     try {
 
       // El servicio API ya maneja las validaciones
-      const data = await apiService.registrarParticipante(formData);
+      const data = await apiService.registrarParticipante({
+        ...formData,
+        condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud : 'Ninguna'
+      });
 
       // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
       setRegistrationResult({
@@ -87,7 +94,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         nombre: '',
         sexo: '',
         telefono: '',
-        sector_profesional: ''
+        sector_profesional: '',
+        ciudad: '',
+        telefono_emergencia: '',
+        tiene_condicion: '',
+        condiciones_salud: ''
       });
 
       // Scroll automático hacia el resultado (inicio del bloque para que se vea la imagen)
@@ -321,6 +332,74 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                     <option key={index} value={sector}>{sector}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 mb-2 font-bold">
+                  <MapPin className="w-4 h-4 inline mr-2" />
+                  Ciudad de procedencia
+                </label>
+                <input
+                  type="text"
+                  name="ciudad"
+                  value={formData.ciudad}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
+                  placeholder="Ejemplo: Tuxtla Gutiérrez"
+                  disabled={isLoading}
+                  maxLength="100"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 mb-2 font-bold">
+                  <PhoneCall className="w-4 h-4 inline mr-2" />
+                  Teléfono de contacto en caso de emergencia
+                </label>
+                <input
+                  type="tel"
+                  name="telefono_emergencia"
+                  value={formData.telefono_emergencia}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
+                  placeholder="Número de un familiar o conocido"
+                  disabled={isLoading}
+                  minLength="10"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 mb-2 font-bold">
+                  <HeartPulse className="w-4 h-4 inline mr-2" />
+                  ¿Tiene alguna condición de salud o enfermedad?
+                </label>
+                <select
+                  name="tiene_condicion"
+                  value={formData.tiene_condicion}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
+                  disabled={isLoading}
+                  required
+                >
+                  <option value="">Seleccionar</option>
+                  <option value="No">No</option>
+                  <option value="Si">Sí</option>
+                </select>
+                {formData.tiene_condicion === 'Si' && (
+                  <textarea
+                    name="condiciones_salud"
+                    value={formData.condiciones_salud}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100 mt-3 resize-none"
+                    placeholder="Describa su condición (ej. asma, diabetes, hipertensión, alergias)"
+                    rows="3"
+                    maxLength="500"
+                    disabled={isLoading}
+                    required
+                  />
+                )}
               </div>
 
               {/* Información importante */}

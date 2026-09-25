@@ -745,7 +745,17 @@ const AttendanceView = ({ onBack }) => {
                                 </div>
                                 <div className="min-w-0">
                                   <div className="font-medium text-gray-100 truncate">{participante.nombre}</div>
-                                  <div className="text-xs text-gray-500">{participante.sexo}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {participante.sexo}{participante.ciudad ? ` · ${participante.ciudad}` : ''}
+                                  </div>
+                                  {participante.condiciones_salud && participante.condiciones_salud !== 'Ninguna' && (
+                                    <div
+                                      className="text-xs text-red-300 truncate"
+                                      title={participante.condiciones_salud}
+                                    >
+                                      Salud: {participante.condiciones_salud}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -810,7 +820,13 @@ const AttendanceView = ({ onBack }) => {
 
                             <p className="text-xs text-gray-500 truncate mb-2">
                               {participante.sector_profesional} · {participante.telefono}
+                              {participante.ciudad ? ` · ${participante.ciudad}` : ''}
                             </p>
+                            {participante.condiciones_salud && participante.condiciones_salud !== 'Ninguna' && (
+                              <p className="text-xs text-red-300 truncate mb-2" title={participante.condiciones_salud}>
+                                Salud: {participante.condiciones_salud}
+                              </p>
+                            )}
 
                             <button
                               onClick={() => toggleAsistencia(participante.id)}
