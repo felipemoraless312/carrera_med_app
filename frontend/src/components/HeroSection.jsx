@@ -120,13 +120,13 @@ const HeroSection = () => {
             {/* Título */}
             <div className="text-center mb-6 animate-fade-in-up">
               <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-tight bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent">
-                XXXIII Carrera Anual "Día Del Médico"
+                Carrera "Día Del Médico"
               </h1>
               <span className="block mt-2 text-xl sm:text-3xl md:text-5xl font-bold text-blue-200">
                 Edición 2026
               </span>
               <p className="mt-3 text-sm sm:text-lg md:text-2xl font-light text-blue-100 max-w-2xl mx-auto">
-                La constancia y perseverancia en el ejercicio dan más vida a tus años, y años a tu vida.
+                ¡Corre trota, camina, rueda pero ... llega!
               </p>
             </div>
 
@@ -193,7 +193,8 @@ const HeroSection = () => {
                 </div>
               </div>
             </div>
-
+                        
+            
             {/* Cuenta regresiva — una sola fila, incluso en móvil */}
             <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-3 sm:p-5 border border-blue-400/20 shadow-2xl max-w-xl mx-auto mb-6">
               <h3 className="text-sm sm:text-lg font-bold mb-3 text-blue-100 text-center uppercase tracking-wide">
@@ -249,6 +250,63 @@ const HeroSection = () => {
             </defs>
             <path d="M0,40L60,45C120,50,240,60,360,65C480,70,600,70,720,65C840,60,960,50,1080,45C1200,40,1320,40,1380,40L1440,40L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z" />
           </svg>
+        </div>
+      </div>
+
+      {/* ============ CONGRESOS Y REUNIONES ============ */}
+      <div className="bg-blue-950 py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-6 md:mb-8">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-100">
+              Congresos y Reuniones Médicas
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-gray-400 max-w-2xl mx-auto">
+              Nuestra comunidad médica también se reúne para seguir creciendo y actualizándose
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-5 md:gap-6 max-w-2xl mx-auto">
+            {[
+              { src: '/images/congresos/congreso_enfermedades.jpeg', alt: 'Congreso de Enfermedades', label: 'Congreso de Enfermedades' },
+              { src: '/images/congresos/reunion_regional.jpeg', alt: 'Reunión Regional', label: 'Reunión Regional' },
+            ].map((item) => (
+              <div
+                key={item.src}
+                className="group relative overflow-hidden rounded-2xl shadow-xl border border-blue-900/40 bg-blue-900"
+              >
+                {/* Fondo desenfocado con la misma imagen para rellenar el espacio sin recortar la foto */}
+                <div className="relative aspect-[3/4] sm:aspect-[9/16] overflow-hidden">
+                  <img
+                    src={item.src}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                  <div className="absolute inset-0 bg-blue-950/40" />
+
+                  {/* Imagen completa, sin recortar */}
+                  <img
+                    src={item.src}
+                    alt={item.alt}
+                    className="relative z-10 w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-500"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/patrocinadores/logo-provisional.svg';
+                      e.target.className = 'relative z-10 w-full h-full object-contain p-8';
+                    }}
+                  />
+
+                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-blue-950/90 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
+                    <p className="text-gray-100 font-bold text-sm sm:text-base drop-shadow">
+                      {item.label}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
