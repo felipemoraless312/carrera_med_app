@@ -12,6 +12,7 @@ import SponsorsSection from './components/SponsorsSection.jsx';
 import ContactSection from './components/ContactSection.jsx';
 import Footer from './components/Footer.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
+import RifaView from './components/RifaView.jsx';
 
 // Componentes de administración (crear estos archivos)
 import AttendanceView from './components/AsisList.jsx';
@@ -41,6 +42,10 @@ const App = () => {
             <Route 
               path="/consulta-participantes-admin" 
               element={<GeneralSearchView onBack={() => window.history.back()} />} 
+            />
+            <Route 
+              path="/rifa" 
+              element={<RifaView onBack={() => window.history.back()} />} 
             />
           </Routes>
         </main>

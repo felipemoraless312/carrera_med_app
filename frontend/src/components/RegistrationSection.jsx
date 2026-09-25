@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Gift } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
 import { apiService } from '../services/api';
 
@@ -7,26 +7,22 @@ const REGISTRATION_STEPS = [
   {
     step: '1',
     title: 'Selecciona tu categoría',
-    description: 'Varonil o Femenil',
-    gradient: 'from-purple-800 to-violet-800'
+    description: 'Varonil o Femenil'
   },
   {
     step: '2',
     title: 'Completa el formulario',
-    description: 'De tus datos personales y de contacto',
-    gradient: 'from-purple-800 to-violet-800'
+    description: 'Con tus datos personales y de contacto'
   },
   {
     step: '3',
-    title: 'Dale clik para finalizar',
-    description: 'Obtén tu número de participante',
-    gradient: 'from-purple-800 to-violet-800'
+    title: 'Dale clic para finalizar',
+    description: 'Obtén tu número de participante'
   },
   {
     step: '4',
-    title: '¡Descarga tu imagen y preparate para correr!',
-    description: '¡Prepárate para el evento!',
-    gradient: 'from-purple-800 to-violet-800'
+    title: 'Descarga tu imagen',
+    description: '¡Y prepárate para correr!'
   }
 ];
 
@@ -70,127 +66,120 @@ const RegistrationSection = ({ setActiveSection }) => {
   }
 
   return (
-    <section id="registro" className="relative py-12 md:py-20 bg-blue-950 min-h-screen overflow-hidden">
-      <div className="container mx-auto px-4 relative z-10">
+    <section id="registro" className="relative py-8 md:py-14 bg-blue-950 overflow-hidden">
+      <div className="container mx-auto px-4 max-w-5xl relative z-10 animate-fade-in">
         {/* Header */}
-        <div className="text-center mb-10 md:mb-16 animate-zoom-in">
-          <div className="relative inline-flex items-center justify-center mb-4 md:mb-6">
-            <div className="relative w-12 h-12 md:w-16 md:h-16 bg-blue-800 rounded-full flex items-center justify-center border-2 md:border-4 border-white/30 shadow-2xl">
-              <Heart className="w-7 h-7 md:w-10 md:h-10 text-red-600 animate-pulse" />
-            </div>
+        <header className="text-center mb-6 md:mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-2 md:mb-3">
+            <span className="w-10 h-10 md:w-12 md:h-12 bg-blue-800 rounded-full flex items-center justify-center border-2 border-white/30 shadow-xl">
+              <Heart className="w-5 h-5 md:w-6 md:h-6 text-red-600 animate-pulse" aria-hidden="true" />
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black text-gray-100">
+              ¡Inscríbete Ahora!
+            </h2>
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-gray-100 mb-3 md:mb-4 px-2">
-            ¡Inscríbete Ahora!
-          </h2>
-          <p className="text-sm sm:text-base md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed px-2">
+          <p className="text-sm md:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Sé parte de esta gran celebración del Día del Médico. Corre por la salud,
             corre por la vida, corre por nuestra comunidad médica.
           </p>
-        </div>
+        </header>
 
-        <div className="flex justify-center items-center">
-          <div className="animate-slide-in-right w-full max-w-xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-2xl rounded-2xl md:rounded-3xl p-5 md:p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:bg-white/15 md:hover:scale-105">
-              <h3 className="text-xl md:text-3xl font-black text-white mb-6 md:mb-8 text-center">
-                Proceso de Registro
-              </h3>
-              <div className="space-y-4 md:space-y-6">
-                {REGISTRATION_STEPS.map((step, index) => (
-                  <div
-                    key={step.step}
-                    className="group flex items-start transform md:hover:scale-105 transition-all duration-300"
-                    style={{ animationDelay: `${index * 0.3}s` }}
-                  >
-                    <div className={`flex-shrink-0 w-10 h-10 md:w-14 md:h-14 bg-gradient-to-r ${step.gradient} rounded-full flex items-center justify-center mr-3 md:mr-4 shadow-xl group-hover:scale-110 transition-transform duration-300 border-2 md:border-4 border-white`}>
-                      <span className="text-white font-black text-sm md:text-lg group-hover:animate-pulse">{step.step}</span>
-                    </div>
-                    <div className="flex-1 pt-1.5 md:pt-3">
-                      <h4 className="text-sm md:text-lg font-black text-gray-200 mb-0.5 md:mb-1 group-hover:text-blue-300 transition-all duration-300">
-                        {step.title}
-                      </h4>
-                      <p className="text-xs md:text-base text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
-                        {step.description}
-                      </p>
-                    </div>
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-5 lg:items-stretch">
+          {/* Proceso de registro */}
+          <div className="lg:col-span-3 bg-white/10 backdrop-blur-2xl rounded-2xl p-4 md:p-6 border border-white/20 shadow-2xl">
+            <h3 className="text-lg md:text-2xl font-black text-white mb-4 md:mb-5 text-center">
+              Proceso de Registro
+            </h3>
+
+            <ol className="space-y-3 md:space-y-4">
+              {REGISTRATION_STEPS.map(({ step, title, description }) => (
+                <li key={step} className="flex items-center gap-3">
+                  <span className="flex-shrink-0 w-9 h-9 md:w-11 md:h-11 bg-gradient-to-r from-purple-800 to-violet-800 rounded-full flex items-center justify-center border-2 border-white shadow-lg text-white font-black text-sm md:text-base">
+                    {step}
+                  </span>
+                  <div>
+                    <h4 className="text-sm md:text-base font-black text-gray-200 leading-tight">
+                      {title}
+                    </h4>
+                    <p className="text-xs md:text-sm text-gray-400">
+                      {description}
+                    </p>
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 md:mt-8 space-y-3 md:space-y-4">
-                <button
-                  type="button"
-                  onClick={REGISTRATION_OPEN ? handleShowRegistrationForm : undefined}
-                  disabled={!REGISTRATION_OPEN}
-                  aria-disabled={!REGISTRATION_OPEN}
-                  className={`group w-full py-3.5 md:py-5 px-5 md:px-6 rounded-xl md:rounded-2xl text-base md:text-xl font-black transition-all duration-300 shadow-xl relative overflow-hidden ${
-                    REGISTRATION_OPEN
-                      ? 'bg-red-700 hover:bg-red-800 text-gray-100 transform hover:scale-105 hover:shadow-blue-900/40'
-                      : 'bg-gray-600/60 text-gray-300 cursor-not-allowed'
-                  }`}
-                >
-                  {REGISTRATION_OPEN ? 'Inscríbete Aquí' : 'Inscripciones cerradas'}
-                </button>
-                <div className="text-center">
-                  <p className="text-gray-400 text-xs md:text-sm px-2">
-                    ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante!
-                  </p>
-                </div>
+                </li>
+              ))}
+            </ol>
+
+            {/* Aviso de datos personales */}
+            <div
+              role="note"
+              className="mt-4 md:mt-5 flex gap-3 rounded-xl border border-amber-300/40 bg-amber-400/10 p-3 md:p-4"
+            >
+              <div>
+                <p className="text-sm md:text-base font-black text-amber-200 leading-tight">
+                  Usa tus datos personales reales
+                </p>
+                <p className="mt-1 text-xs md:text-sm text-gray-300 leading-snug">
+                  Tu nombre y número de celular son necesarios para reclamar premios en la tómbola de premios.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Contador de participantes inscritos */}
-        <div className="mt-10 md:mt-16 flex justify-center animate-fade-in delay-1000">
-          <div className="bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 backdrop-blur-2xl rounded-2xl md:rounded-3xl p-6 md:p-8 border-2 md:border-4 border-green-300/40 text-center transform md:hover:scale-110 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/30 group max-w-md w-full">
-            <div className="text-4xl md:text-7xl font-black text-white mb-2 md:mb-3 group-hover:animate-pulse drop-shadow-2xl">
-              {participantsCount.toLocaleString()}
-            </div>
-            <div className="text-white/90 font-black text-base md:text-xl mb-1 md:mb-2 group-hover:text-white transition-colors duration-300">
-              Participantes inscritos
-            </div>
-            <div className="text-white/70 font-bold text-xs md:text-sm group-hover:text-white/90 transition-colors duration-300">
-              ¡Únete a la comunidad médica!
+            <div className="mt-4 md:mt-5">
+              <button
+                type="button"
+                onClick={REGISTRATION_OPEN ? handleShowRegistrationForm : undefined}
+                disabled={!REGISTRATION_OPEN}
+                aria-disabled={!REGISTRATION_OPEN}
+                className={`w-full py-3 md:py-4 px-5 rounded-xl text-base md:text-lg font-black transition-colors duration-300 shadow-xl focus:outline-none focus-visible:ring-4 focus-visible:ring-white/50 ${
+                  REGISTRATION_OPEN
+                    ? 'bg-red-700 hover:bg-red-800 active:bg-red-900 text-gray-100'
+                    : 'bg-gray-600/60 text-gray-300 cursor-not-allowed'
+                }`}
+              >
+                {REGISTRATION_OPEN ? 'Inscríbete Aquí' : 'Inscripciones cerradas'}
+              </button>
+              <p className="mt-2 text-center text-gray-400 text-xs md:text-sm">
+                ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante!
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Información adicional */}
-        <div className="mt-8 md:mt-12 grid md:grid-cols-1 gap-6 md:gap-8 animate-fade-in delay-1000">
-          <div className="bg-white/10 backdrop-blur-2xl rounded-2xl p-5 md:p-6 border border-white/20 text-center transform md:hover:scale-110 transition-all duration-300 hover:bg-white/20 group">
-            <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-1 md:mb-2 group-hover:animate-pulse">
-              XXXIII
+          {/* Contador y edición */}
+          <aside className="lg:col-span-2 grid grid-cols-2 lg:grid-cols-1 lg:grid-rows-2 gap-3 md:gap-4">
+            <div className="flex flex-col justify-center bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 rounded-2xl p-4 md:p-6 border-2 border-green-300/40 text-center shadow-xl">
+              <div className="text-3xl md:text-5xl font-black text-white drop-shadow-2xl">
+                {participantsCount.toLocaleString()}
+              </div>
+              <div className="text-white/90 font-black text-sm md:text-lg leading-tight">
+                Participantes inscritos
+              </div>
+              <div className="hidden sm:block mt-1 text-white/70 font-bold text-xs md:text-sm">
+                ¡Únete a la comunidad médica!
+              </div>
             </div>
-            <div className="text-white/80 text-sm md:text-base font-bold group-hover:text-white transition-colors duration-300">
-              Edición del evento
+
+            <div className="flex flex-col justify-center bg-white/10 backdrop-blur-2xl rounded-2xl p-4 md:p-6 border border-white/20 text-center">
+              <div className="text-3xl md:text-5xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+                XXXIII
+              </div>
+              <div className="text-white/80 text-sm md:text-lg font-bold leading-tight">
+                Edición del evento
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes zoom-in {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes slide-in-right {
-          from { opacity: 0; transform: translateX(50px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
+      <style>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(30px); }
+          from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-zoom-in {
-          animation: zoom-in 1s ease-out;
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 1s ease-out;
-        }
         .animate-fade-in {
-          animation: fade-in 1s ease-out;
+          animation: fade-in 0.8s ease-out;
         }
-        .delay-1000 {
-          animation-delay: 1s;
+        @media (prefers-reduced-motion: reduce) {
+          .animate-fade-in { animation: none; }
         }
       `}</style>
     </section>

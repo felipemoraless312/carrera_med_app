@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, Header
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -13,9 +13,14 @@ import qrcode
 import tempfile
 from io import BytesIO
 import pathlib
+import secrets
 
 # Configuración
 MAX_REGISTROS = 2000
+
+# PIN de la rifa: se define con la variable de entorno RIFA_PIN
+RIFA_PIN = os.getenv("RIFA_PIN", "")
+ESTADOS_GANADOR = {"pendiente", "entregado", "anulado"}
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
 BASE_IMG_PATH = 'app/plantilla_nueva.png'
@@ -130,6 +135,17 @@ def crear_tablas():
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_telefono_unique ON participantes(telefono)")
         except Exception as idx_err:
             print(f"⚠️ No se pudo crear índice único de teléfono (puede haber duplicados existentes): {idx_err}")
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS ganadores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_ganador INTEGER NOT NULL,
+            participante_id INTEGER NOT NULL UNIQUE,
+            premio TEXT,
+            fecha_sorteo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            estado TEXT NOT NULL DEFAULT 'pendiente',
+            fecha_entrega TIMESTAMP,
+            FOREIGN KEY (participante_id) REFERENCES participantes(id)
+        )""")
 
         con.commit()
         print("Base de datos creada/migrada correctamente")
@@ -527,6 +543,131 @@ async def actualizar_asistencia_masiva(data: AsistenciaBulkUpdate):
     finally:
         con.close()
 
+class GirarRequest(BaseModel):
+    solo_asistentes: bool = True
+    premio: Optional[str] = None
+
+
+class GanadorUpdate(BaseModel):
+    estado: Optional[str] = None
+    premio: Optional[str] = None
+
+
+def verificar_pin(x_rifa_pin: Optional[str] = Header(None)):
+    if not RIFA_PIN or not x_rifa_pin or not secrets.compare_digest(x_rifa_pin, RIFA_PIN):
+        raise HTTPException(status_code=401, detail="PIN inválido")
+
+
+def _filtro_elegibles(solo_asistentes: bool) -> str:
+    base = "FROM participantes WHERE id NOT IN (SELECT participante_id FROM ganadores)"
+    return base + (" AND asistio = 1" if solo_asistentes else "")
+
+
+@app.get("/api/rifa/elegibles", dependencies=[Depends(verificar_pin)])
+async def rifa_elegibles(solo_asistentes: bool = True, muestra: int = 24):
+    """Total de elegibles + muestra aleatoria de nombres para dibujar la ruleta"""
+    con = conectar_bd()
+    try:
+        cur = con.cursor()
+        base = _filtro_elegibles(solo_asistentes)
+        cur.execute(f"SELECT COUNT(*) {base}")
+        total = cur.fetchone()[0]
+        cur.execute(f"SELECT nombre {base} ORDER BY RANDOM() LIMIT ?", (max(1, min(muestra, 40)),))
+        return {"total": total, "muestra": [{"nombre": r[0]} for r in cur.fetchall()]}
+    finally:
+        con.close()
+
+
+@app.post("/api/rifa/girar", dependencies=[Depends(verificar_pin)])
+async def rifa_girar(data: GirarRequest):
+    """Elige y guarda un ganador (el sorteo real ocurre aquí, no en el navegador)"""
+    con = conectar_bd()
+    try:
+        con.execute("BEGIN IMMEDIATE")  # bloquea escrituras concurrentes durante el sorteo
+        cur = con.cursor()
+        cur.execute(f"SELECT id, nombre, numero_asignado {_filtro_elegibles(data.solo_asistentes)}")
+        elegibles = cur.fetchall()
+        if not elegibles:
+            raise HTTPException(status_code=400, detail="No quedan participantes elegibles")
+
+        pid, nombre, numero = secrets.choice(elegibles)
+        cur.execute("SELECT COALESCE(MAX(numero_ganador), 0) + 1 FROM ganadores")
+        numero_ganador = cur.fetchone()[0]
+        premio = data.premio.strip() if data.premio and data.premio.strip() else None
+
+        cur.execute(
+            "INSERT INTO ganadores (numero_ganador, participante_id, premio) VALUES (?, ?, ?)",
+            (numero_ganador, pid, premio),
+        )
+        ganador_id = cur.lastrowid
+        con.commit()
+        return {
+            "id": ganador_id,
+            "numero_ganador": numero_ganador,
+            "participante_id": pid,
+            "nombre": nombre,
+            "numero_asignado": numero,
+            "premio": premio,
+        }
+    except HTTPException:
+        con.rollback()
+        raise
+    except Exception as e:
+        con.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en el sorteo: {str(e)}")
+    finally:
+        con.close()
+
+
+@app.get("/api/rifa/ganadores", dependencies=[Depends(verificar_pin)])
+async def rifa_ganadores():
+    """Registro completo de ganadores (incluye teléfono para verificar al reclamar)"""
+    con = conectar_bd()
+    try:
+        cur = con.cursor()
+        cur.execute("""SELECT g.id, g.numero_ganador, g.participante_id, p.nombre,
+                              p.numero_asignado, p.telefono, g.premio, g.estado,
+                              g.fecha_sorteo, g.fecha_entrega
+                       FROM ganadores g
+                       JOIN participantes p ON p.id = g.participante_id
+                       ORDER BY g.numero_ganador DESC""")
+        cols = [c[0] for c in cur.description]
+        return {"ganadores": [dict(zip(cols, r)) for r in cur.fetchall()]}
+    finally:
+        con.close()
+
+
+@app.patch("/api/rifa/ganadores/{ganador_id}", dependencies=[Depends(verificar_pin)])
+async def rifa_actualizar_ganador(ganador_id: int, data: GanadorUpdate):
+    """Marcar entregado / anulado, o cambiar el premio"""
+    if data.estado is not None and data.estado not in ESTADOS_GANADOR:
+        raise HTTPException(status_code=400, detail="Estado inválido")
+
+    con = conectar_bd()
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT id FROM ganadores WHERE id = ?", (ganador_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Ganador no encontrado")
+
+        if data.estado is not None:
+            fecha = datetime.now().isoformat() if data.estado == "entregado" else None
+            cur.execute("UPDATE ganadores SET estado = ?, fecha_entrega = ? WHERE id = ?",
+                        (data.estado, fecha, ganador_id))
+        if data.premio is not None:
+            cur.execute("UPDATE ganadores SET premio = ? WHERE id = ?",
+                        (data.premio.strip() or None, ganador_id))
+        con.commit()
+        return {"id": ganador_id, "message": "Ganador actualizado"}
+    except HTTPException:
+        con.rollback()
+        raise
+    except Exception as e:
+        con.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar ganador: {str(e)}")
+    finally:
+        con.close()
+
 # IMPORTANTE: Montar archivos estáticos AL FINAL para no interferir con la API
 app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
@@ -544,4 +685,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
