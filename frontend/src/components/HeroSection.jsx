@@ -10,6 +10,7 @@ import {
   Users,
   Route,
   Award,
+  ExternalLink,
 } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
@@ -126,7 +127,7 @@ const HeroSection = () => {
                 Edición 2026
               </span>
               <p className="mt-3 text-sm sm:text-lg md:text-2xl font-light text-blue-100 max-w-2xl mx-auto">
-                ¡Corre trota, camina, rueda pero ... llega!
+                ¡CuposCorre trota, camina, rueda pero ... llega!
               </p>
             </div>
 
@@ -267,14 +268,26 @@ const HeroSection = () => {
 
           <div className="grid sm:grid-cols-2 gap-5 md:gap-6 max-w-2xl mx-auto">
             {[
-              { src: '/images/congresos/congreso_enfermedades.jpeg', alt: 'Congreso de Enfermedades', label: 'Congreso de Enfermedades' },
-              { src: '/images/congresos/reunion_regional.jpeg', alt: 'Reunión Regional', label: 'Reunión Regional' },
+              { 
+                src: '/images/congresos/congreso_enfermedades.jpeg', 
+                alt: 'Congreso de Enfermedades', 
+                label: 'Congreso de Enfermedades',
+                link: 'https://docs.google.com/forms/d/e/1FAIpQLSfSkCzLlzVhyhX6XnK3GySTD1Cnc6HjmASY084w8CcJNS-SUA/viewform?usp=dialog',
+                buttonText: 'Inscríbete al Congreso'
+              },
+              { 
+                src: '/images/congresos/reunion_regional.jpeg', 
+                alt: 'Reunión Regional', 
+                label: 'Reunión Regional',
+                link: 'https://docs.google.com/forms/d/e/1FAIpQLSd9GLTrAKIqEvYhEkUtmMneY8y3ovl46pQH9nDuYnexSnWnUQ/viewform?usp=dialog',
+                buttonText: 'Inscríbete a la Reunión'
+              },
             ].map((item) => (
               <div
                 key={item.src}
-                className="group relative overflow-hidden rounded-2xl shadow-xl border border-blue-900/40 bg-blue-900"
+                className="group relative overflow-hidden rounded-2xl shadow-xl border border-blue-900/40 bg-blue-900 flex flex-col justify-between"
               >
-                {/* Fondo desenfocado con la misma imagen para rellenar el espacio sin recortar la foto */}
+                {/* Contenedor de la imagen */}
                 <div className="relative aspect-[3/4] sm:aspect-[9/16] overflow-hidden">
                   <img
                     src={item.src}
@@ -299,9 +312,19 @@ const HeroSection = () => {
 
                   <div className="absolute inset-0 z-20 bg-gradient-to-t from-blue-950/90 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-                    <p className="text-gray-100 font-bold text-sm sm:text-base drop-shadow">
+                    <p className="text-gray-100 font-bold text-sm sm:text-base drop-shadow mb-3">
                       {item.label}
                     </p>
+                    {/* Botón de redirección integrado sobre cada imagen */}
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-lg transition-colors pointer-events-auto"
+                    >
+                      <span>{item.buttonText}</span>
+                      <ExternalLink className="w-4 h-4 shrink-0" />
+                    </a>
                   </div>
                 </div>
               </div>

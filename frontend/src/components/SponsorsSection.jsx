@@ -22,7 +22,8 @@ const SponsorsSection = () => {
     { name: 'Puritan Uniforms', image: '/images/patrocinadores/puritan.webp' },
     { name: 'HD (Hematology Diagnostic)', image: '/images/patrocinadores/HD.jpg' },
     { name: 'Xamaipak (Hospital de Alta Especialidad)', image: '/images/patrocinadores/xamaipak.avif' },
-    { name: 'BS (Blood Service - Banco de Sangre)', image: '/images/patrocinadores/BS.jpg' }
+    { name: 'BS (Blood Service - Banco de Sangre)', image: '/images/patrocinadores/BS.jpg' },
+    { name: 'Clinica Larrosa', image: '/images/patrocinadores/larosa.png' }
   ];
 
   const organizingCommittee = [
