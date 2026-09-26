@@ -152,6 +152,10 @@ const fetchWithTimeout = async (url, options = {}) => {
     throw error;
   }
 };
+
+// Validación simple y permisiva de correo electrónico
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const apiService = {
   async healthCheck() {
     try {
@@ -217,6 +221,10 @@ export const apiService = {
         throw new Error('El teléfono de emergencia debe ser distinto a su propio teléfono');
       }
 
+      if (!participanteData.correo?.trim() || !EMAIL_REGEX.test(participanteData.correo.trim())) {
+        throw new Error('Debe ingresar un correo electrónico válido');
+      }
+
       const response = await fetchWithTimeout(buildApiUrl('/api/registro'), {
         method: 'POST',
         body: JSON.stringify({
@@ -226,6 +234,7 @@ export const apiService = {
           sector_profesional: participanteData.sector_profesional,
           ciudad: participanteData.ciudad.trim(),
           telefono_emergencia: participanteData.telefono_emergencia.trim(),
+          correo: participanteData.correo.trim(),
           condiciones_salud: participanteData.condiciones_salud?.trim() || 'Ninguna'
         })
       });
@@ -241,6 +250,7 @@ export const apiService = {
           error.message.includes('dígitos') ||
           error.message.includes('obligatoria') ||
           error.message.includes('distinto') ||
+          error.message.includes('correo') ||
           error.message.includes('Ya existe') ||
           error.message.includes('límite máximo')) {
         throw error;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Phone, User, Briefcase, MapPin, PhoneCall, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift } from 'lucide-react';
+import { Users, Phone, User, Briefcase, MapPin, PhoneCall, Mail, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift } from 'lucide-react';
 import { apiService, downloadUtils } from '../services/api';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
@@ -11,6 +11,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     sector_profesional: '',
     ciudad: '',
     telefono_emergencia: '',
+    correo: '',
     tiene_condicion: '',
     condiciones_salud: ''
   });
@@ -35,9 +36,8 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
           "Medico especialista",
           "Estudiante de medicina",
           "Medico interno",
-          "Medico en servicio social ",
+          "Medico en servicio social",
           "Medico residente",
-          "Medico especialista",
           "Paramedico",
           "Tecnico en enfermería",
           "Lic. en enfermería",
@@ -98,6 +98,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         sector_profesional: '',
         ciudad: '',
         telefono_emergencia: '',
+        correo: '',
         tiene_condicion: '',
         condiciones_salud: ''
       });
@@ -370,20 +371,20 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                   required
                 />
               </div>
-                            <div>
+
+              <div>
                 <label className="block text-gray-300 mb-2 font-bold">
-                  <PhoneCall className="w-4 h-4 inline mr-2" />
-                  Correo electronico
+                  <Mail className="w-4 h-4 inline mr-2" />
+                  Correo electrónico
                 </label>
                 <input
-                  type="tel"
-                  name="telefono_emergencia"
-                  value={formData.telefono_emergencia}
+                  type="email"
+                  name="correo"
+                  value={formData.correo}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
-                  placeholder="Correo electronico: ejemplo"
+                  placeholder="Ejemplo: correo@ejemplo.com"
                   disabled={isLoading}
-                  minLength="10"
                   required
                 />
               </div>

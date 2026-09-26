@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import StreamingResponse
 import sqlite3
 import os
+import re
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
@@ -25,29 +26,30 @@ DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
 BASE_IMG_PATH = 'app/plantilla_nueva.png'
 
+# Validación simple y permisiva de correo electrónico
+EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
 # Fuentes propias (empaquetadas en el repo, no dependen del SO del servidor)
 FONT_BOLD_PATH = 'app/fonts/Poppins-Bold.ttf'
 FONT_REGULAR_PATH = 'app/fonts/Poppins-Regular.ttf'
 
-# Coordenadas detectadas en la plantilla (1080x1920 px)
 QR_BOX = (181, 600, 898, 1317)  # left, top, right, bottom
 NUMERO_POS = (540, 1435)  # centro (x, y)
 NOMBRE_POS = (540, 1555)  # centro (x, y)
 
-# Sectores profesionales (igual que en Gradio)
 SECTORES_SALUD = [
-    "Medicina General",
-    "Enfermería",
-    "Odontología",
-    "Fisioterapia",
-    "Psicología",
-    "Nutrición",
-    "Farmacia",
-    "Medicina Especializada",
-    "Técnico en Salud",
-    "Administración en Salud",
-    "Otro sector de salud",
-    "Área diferente a la salud"
+          "Medico",
+          "Medico especialista",
+          "Estudiante de medicina",
+          "Medico interno",
+          "Medico en servicio social",
+          "Medico residente",
+          "Paramedico",
+          "Tecnico en enfermería",
+          "Lic. en enfermería",
+          "Enfermera especialista",
+          "Otro sector de salud",
+          "Público en general"
 ]
 
 app = FastAPI(title="Carrera del Médico API", version="1.0.0")
@@ -84,6 +86,7 @@ class ParticipanteCreate(BaseModel):
     # Valores por defecto vacíos para responder con un 400 claro (no un 422) si faltan
     ciudad: str = ""
     telefono_emergencia: str = ""
+    correo: str = ""
     condiciones_salud: str = ""
 
 class ParticipanteResponse(BaseModel):
@@ -124,10 +127,10 @@ def crear_tablas():
             fecha_asistencia TIMESTAMP,
             ciudad TEXT,
             telefono_emergencia TEXT,
-            condiciones_salud TEXT
+            condiciones_salud TEXT,
+            correo TEXT
         )""")
 
-        # Migración para bases de datos ya existentes en producción
         cursor.execute("PRAGMA table_info(participantes)")
         columnas = [c[1] for c in cursor.fetchall()]
         if 'asistio' not in columnas:
@@ -136,7 +139,7 @@ def crear_tablas():
         if 'fecha_asistencia' not in columnas:
             cursor.execute("ALTER TABLE participantes ADD COLUMN fecha_asistencia TIMESTAMP")
             print("🔧 Migración: columna 'fecha_asistencia' agregada")
-        for columna_nueva in ('ciudad', 'telefono_emergencia', 'condiciones_salud'):
+        for columna_nueva in ('ciudad', 'telefono_emergencia', 'condiciones_salud', 'correo'):
             if columna_nueva not in columnas:
                 cursor.execute(f"ALTER TABLE participantes ADD COLUMN {columna_nueva} TEXT")
                 print(f"🔧 Migración: columna '{columna_nueva}' agregada")
@@ -305,6 +308,10 @@ async def registrar_participante(participante: ParticipanteCreate):
     if telefono_emergencia == participante.telefono.strip():
         raise HTTPException(status_code=400, detail="El teléfono de emergencia debe ser distinto a su propio teléfono.")
 
+    correo = participante.correo.strip()
+    if not correo or not EMAIL_REGEX.match(correo):
+        raise HTTPException(status_code=400, detail="Debe ingresar un correo electrónico válido.")
+
     condiciones_salud = participante.condiciones_salud.strip() or "Ninguna"
 
     # Verificar límite de registros
@@ -340,11 +347,11 @@ async def registrar_participante(participante: ParticipanteCreate):
         # Insertar el nuevo participante
         cursor.execute("""INSERT INTO participantes
                          (id, nombre, sexo, telefono, sector_profesional, numero_asignado,
-                          ciudad, telefono_emergencia, condiciones_salud)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                          ciudad, telefono_emergencia, condiciones_salud, correo)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                       (next_id, participante.nombre.strip(), participante.sexo,
                        participante.telefono.strip(), participante.sector_profesional, numero_asignado,
-                       participante.ciudad.strip(), telefono_emergencia, condiciones_salud))
+                       participante.ciudad.strip(), telefono_emergencia, condiciones_salud, correo))
 
         con.commit()
         print(f"✅ Participante registrado: {numero_asignado} - {participante.nombre.strip()}")  # Debug log
@@ -436,9 +443,9 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
         params = []
 
         if search and search.strip():
-            base_query += " AND (nombre LIKE ? OR telefono LIKE ? OR numero_asignado LIKE ? OR ciudad LIKE ?)"
+            base_query += " AND (nombre LIKE ? OR telefono LIKE ? OR numero_asignado LIKE ? OR ciudad LIKE ? OR correo LIKE ?)"
             like_term = f"%{search.strip()}%"
-            params.extend([like_term, like_term, like_term, like_term])
+            params.extend([like_term, like_term, like_term, like_term, like_term])
 
         cursor.execute(f"SELECT COUNT(*) {base_query}", params)
         total = cursor.fetchone()[0]
@@ -446,7 +453,7 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
                 fecha_registro, numero_asignado, asistio, fecha_asistencia,
-                ciudad, telefono_emergencia, condiciones_salud
+                ciudad, telefono_emergencia, condiciones_salud, correo
                 {base_query}
                 ORDER BY fecha_registro DESC LIMIT ? OFFSET ?""",
             params + [limit, offset]
@@ -467,7 +474,8 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
                     "fecha_asistencia": p[8],
                     "ciudad": p[9],
                     "telefono_emergencia": p[10],
-                    "condiciones_salud": p[11]
+                    "condiciones_salud": p[11],
+                    "correo": p[12]
                 }
                 for p in participantes
             ],
@@ -497,7 +505,7 @@ async def buscar_participante(tipo: str, valor: str):
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
                 fecha_registro, numero_asignado, asistio, fecha_asistencia,
-                ciudad, telefono_emergencia, condiciones_salud
+                ciudad, telefono_emergencia, condiciones_salud, correo
                 FROM participantes WHERE {columna} {operador} ?""",
             (valor_busqueda,)
         )
@@ -518,7 +526,8 @@ async def buscar_participante(tipo: str, valor: str):
             "fecha_asistencia": resultado[8],
             "ciudad": resultado[9],
             "telefono_emergencia": resultado[10],
-            "condiciones_salud": resultado[11]
+            "condiciones_salud": resultado[11],
+            "correo": resultado[12]
         }
     except HTTPException:
         raise
