@@ -31,9 +31,9 @@ const InformationSection = () => {
   ];
 
   const schedule = [
-    { time: '6:00 AM', activity: 'LLegada al punto de encuentro', icon: Calendar, color: 'text-blue-500' },
+    { time: '6:00 AM', activity: 'LLegada al punto de encuentro: Parque Central, Tuxtla Gutierrez, Chiapas.', icon: Calendar, color: 'text-blue-500' },
     { time: '7:00 AM', activity: 'Salida oficial de la carrera', icon: Users, color: 'text-green-500' },
-    { time: '09:00 AM', activity: 'Premiación', icon: Trophy, color: 'text-yellow-500' }
+    { time: '09:00 AM', activity: 'Meta y premiación: Parque recreativo Caña Hueca', icon: Trophy, color: 'text-yellow-500' }
   ];
 
   return (
@@ -109,8 +109,8 @@ const InformationSection = () => {
                   </h4>
                   <p className="text-gray-300 text-sm sm:text-base leading-relaxed">
                     Salida desde el Parque Central, recorriendo la principal avenida de la ciudad,
-                    pasando por el parque de la marimba, Hotel Bonampak entrando al parque
-                    cañahueca, y por último su pista de atletismo.
+                    pasando por el parque de la marimba, restaurant Bonampak entrando al parque
+                    cañahueca por la entrada de la gasolienera, y por último una vuelta por su pista de atletismo. Recoriendo aproximadamente 5 Km.
                   </p>
                 </div>
               </div>

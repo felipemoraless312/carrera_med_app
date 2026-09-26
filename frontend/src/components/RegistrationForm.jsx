@@ -31,18 +31,19 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         console.error('Error al cargar sectores:', error);
         // Fallback si no se pueden cargar desde la API
         setSectoresSalud([
-          "Medicina General",
-          "Enfermería", 
-          "Odontología",
-          "Fisioterapia",
-          "Psicología",
-          "Nutrición",
-          "Farmacia",
-          "Medicina Especializada",
-          "Técnico en Salud",
-          "Administración en Salud",
+          "Medico",
+          "Medico especialista",
+          "Estudiante de medicina",
+          "Medico interno",
+          "Medico en servicio social ",
+          "Medico residente",
+          "Medico especialista",
+          "Paramedico",
+          "Tecnico en enfermería",
+          "Lic. en enfermería",
+          "Enfermera especialista",
           "Otro sector de salud",
-          "Área diferente a la salud"
+          "Público en general"
         ]);
       }
     };
@@ -364,6 +365,23 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
                   placeholder="Número de un familiar o conocido"
+                  disabled={isLoading}
+                  minLength="10"
+                  required
+                />
+              </div>
+                            <div>
+                <label className="block text-gray-300 mb-2 font-bold">
+                  <PhoneCall className="w-4 h-4 inline mr-2" />
+                  Correo electronico
+                </label>
+                <input
+                  type="tel"
+                  name="telefono_emergencia"
+                  value={formData.telefono_emergencia}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100"
+                  placeholder="Correo electronico: ejemplo"
                   disabled={isLoading}
                   minLength="10"
                   required

@@ -23,7 +23,8 @@ const SponsorsSection = () => {
     { name: 'HD (Hematology Diagnostic)', image: '/images/patrocinadores/HD.jpg' },
     { name: 'Xamaipak (Hospital de Alta Especialidad)', image: '/images/patrocinadores/xamaipak.avif' },
     { name: 'BS (Blood Service - Banco de Sangre)', image: '/images/patrocinadores/BS.jpg' },
-    { name: 'Clinica Larrosa', image: '/images/patrocinadores/larosa.png' }
+    { name: 'Clinica Larrosa', image: '/images/patrocinadores/larosa.png' },  
+    { name: 'HOSCEM: Hospital y centro Médico San Cristobal de las Casas', image: '/images/patrocinadores/hoscem.png' }
   ];
 
   const organizingCommittee = [

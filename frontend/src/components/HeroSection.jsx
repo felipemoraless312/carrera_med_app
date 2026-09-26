@@ -121,13 +121,10 @@ const HeroSection = () => {
             {/* Título */}
             <div className="text-center mb-6 animate-fade-in-up">
               <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-tight bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent">
-                Carrera "Día Del Médico"
+                XXXIII Carrera "Día Del Médico"
               </h1>
-              <span className="block mt-2 text-xl sm:text-3xl md:text-5xl font-bold text-blue-200">
-                Edición 2026
-              </span>
-              <p className="mt-3 text-sm sm:text-lg md:text-2xl font-light text-blue-100 max-w-2xl mx-auto">
-                ¡CuposCorre trota, camina, rueda pero ... llega!
+              <p className="mt-3 text-sm sm:text-lg md:text-4xl font-light text-blue-100 max-w-2xl mx-auto">
+                ¡Corre trota, camina, rueda pero... llega!
               </p>
             </div>
 
@@ -228,7 +225,7 @@ const HeroSection = () => {
                 ¡Regístrate Ahora!
               </button>
               <p className="text-xs sm:text-sm text-blue-100">
-                ¡Cupos limitados! Asegura tu lugar en la carrera más esperada del año.
+                ¡¡¡ Disfruta de este evento deportiva en compañia de tus médicos, amigos y familia !!!
               </p>
             </div>
           </div>
@@ -262,7 +259,7 @@ const HeroSection = () => {
               Congresos y Reuniones Médicas
             </h2>
             <p className="mt-2 text-sm sm:text-base text-gray-400 max-w-2xl mx-auto">
-              Nuestra comunidad médica también se reúne para seguir creciendo y actualizándose
+              Nuestra comunidad médica también se reúne para seguir creciendo y actualizándose, se parte de estos eventos. 
             </p>
           </div>
 
