@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Phone, MapPin, Facebook, Headphones } from 'lucide-react';
+import { Heart, Phone, MapPin, Facebook, Building2 } from 'lucide-react';
 
 // Función de scroll suave
 const scrollToSection = (sectionId, setActiveSection) => {
@@ -15,13 +15,35 @@ const Footer = ({ setActiveSection }) => {
     { icon: Facebook, href: '#', color: 'hover:text-blue-500' }
   ];
 
-  const contactInfo = [
-    { icon: Phone, text: '961 613 66 66' },
-    { icon: MapPin, text: 'Tuxtla Gutiérrez, Chiapas' }
-  ];
+  const medicaSur = {
+    name: 'Médica Sur',
+    director: 'Dr. Francisco A. Ramos Narváez.',
+    address: [
+      '2a. Avenida Sur Poniente. # 557, colonia Centro.',
+      'C.P. 29000, Tuxtla Gutiérrez, Chiapas, México.'
+    ],
+    phones: [
+      { text: '(961) 61 3 66 66', tel: '9616136666' },
+      { text: '(961) 61 1 12 84', tel: '9616111284' },
+      { text: '(961) 61 1 13 96', tel: '9616111396' },
+      { text: '(961) 61 2 56 68', tel: '9616125668' }
+    ]
+  };
+
+  const mapsUrl = 'https://maps.app.goo.gl/DGZKGP9dpCddKzTa9';
 
   const supportInfo = [
-    { icon: Phone, text: '961 610 64 69' }
+    { name: 'Ing. Felipe Morales', text: '961 610 6469', tel: '9616106469' },
+    { name: 'Ing. Cesar Gomez', text: '962 354 6362', tel: '9623546362' }
+  ];
+
+  const servicios = [
+    'Diseño de Proyectos',
+    'Equipo de Cómputo y Accesorios',
+    'Redes y Sistemas de Cableado Estructurado',
+    'Equipos para Telecomunicaciones',
+    'Internet Satelital',
+    'Soporte Técnico',
   ];
 
   return (
@@ -73,21 +95,57 @@ const Footer = ({ setActiveSection }) => {
               </div>
             </div>
 
-            {/* Información de contacto del evento */}
+            {/* Información de contacto del evento (Médica Sur) */}
             <div>
               <h4 className="text-lg font-bold mb-6 text-gray-100">Contacto</h4>
               <div className="space-y-4">
-                {contactInfo.map((contact, index) => {
-                  const IconComponent = contact.icon;
-                  return (
-                    <div key={index} className="flex items-center text-gray-400">
-                      <div className="bg-blue-900 p-2 rounded-lg mr-3">
-                        <IconComponent className="w-4 h-4 text-blue-400" />
-                      </div>
-                      <span className="text-sm">{contact.text}</span>
-                    </div>
-                  );
-                })}
+                <div className="flex items-start text-gray-400">
+                  <div className="bg-blue-900 p-2 rounded-lg mr-3 flex-shrink-0">
+                    <Building2 className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="text-sm leading-relaxed">
+                    <span className="block font-semibold text-gray-200">{medicaSur.name}</span>
+                    <span className="block">{medicaSur.director}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start text-gray-400">
+                  <div className="bg-blue-900 p-2 rounded-lg mr-3 flex-shrink-0">
+                    <MapPin className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Ver ubicación en Google Maps"
+                    className="hover:text-blue-400 transition-colors duration-200"
+                  >
+                    <address className="text-sm not-italic leading-relaxed">
+                      {medicaSur.address.map((line) => (
+                        <span key={line} className="block">{line}</span>
+                      ))}
+                    </address>
+                  </a>
+                </div>
+
+                <div className="flex items-start text-gray-400">
+                  <div className="bg-blue-900 p-2 rounded-lg mr-3 flex-shrink-0">
+                    <Phone className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="text-sm leading-relaxed">
+                    <span className="block text-gray-500 text-xs mb-1">Teléfonos:</span>
+                    {medicaSur.phones.map((phone) => (
+                      <a
+                        key={phone.tel}
+                        href={`tel:${phone.tel}`}
+                        className="block hover:text-blue-400 transition-colors duration-200"
+                      >
+                        {phone.text}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
                 <p className="text-xs text-gray-500 leading-relaxed pt-1">
                   Para dudas o fallas con tu inscripción o registro en línea.
                 </p>
@@ -98,17 +156,34 @@ const Footer = ({ setActiveSection }) => {
             <div>
               <h4 className="text-lg font-bold mb-6 text-gray-100">Soluciones Tecnológicas</h4>
               <div className="space-y-4">
-                {supportInfo.map((contact, index) => {
-                  const IconComponent = contact.icon;
-                  return (
-                    <div key={index} className="flex items-center text-gray-400">
-                      <div className="bg-blue-900 p-2 rounded-lg mr-3">
-                        <IconComponent className="w-4 h-4 text-blue-400" />
-                      </div>
-                      <span className="text-sm">{contact.text}</span>
+                <p className="text-base font-semibold text-gray-200">Numma</p>
+
+                {supportInfo.map((contact) => (
+                  <div key={contact.tel} className="flex items-start text-gray-400">
+                    <div className="bg-blue-900 p-2 rounded-lg mr-3 flex-shrink-0">
+                      <Phone className="w-4 h-4 text-blue-400" />
                     </div>
-                  );
-                })}
+                    <div className="text-sm leading-relaxed">
+                      <span className="block text-gray-200">{contact.name}</span>
+                      <a
+                        href={`tel:${contact.tel}`}
+                        className="hover:text-blue-400 transition-colors duration-200"
+                      >
+                        {contact.text}
+                      </a>
+                    </div>
+                  </div>
+                ))}
+
+                <ul className="space-y-2">
+                  {servicios.map((servicio) => (
+                    <li key={servicio} className="flex items-start text-sm text-gray-400">
+                      <span className="w-1.5 h-1.5 bg-blue-700 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                      {servicio}
+                    </li>
+                  ))}
+                </ul>
+
                 <p className="text-xs text-gray-500 leading-relaxed pt-1">
                   Desarrollo web y soporte técnico del sitio.
                 </p>

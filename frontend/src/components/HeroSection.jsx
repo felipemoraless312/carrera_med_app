@@ -5,12 +5,9 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  Trophy,
-  Users,
   Route,
-  Award,
-  ExternalLink,
+  X,
+  ZoomIn,
 } from 'lucide-react';
 
 const useCountdown = (targetDate) => {
@@ -45,9 +42,11 @@ const useCountdown = (targetDate) => {
   return timeLeft;
 };
 
+const ROUTE_IMAGE = '/images/carrera/recorrido.jpeg';
+
 const HeroSection = () => {
   const navigate = useNavigate();
-  const eventDate = '2026-10-25T07:00:00';
+  const eventDate = '2026-10-24T07:00:00';
   const location = 'Parque central - Tuxtla Gutiérrez, Chiapas';
   const timeLeft = useCountdown(eventDate);
 
@@ -56,13 +55,17 @@ const HeroSection = () => {
     '/images/carrera/carreramed5.jpg',
     '/images/carrera/carreramed1.jpg',
     '/images/carrera/carreramed12.jpg',
-    '/images/carrera/podio.jpg', 
+    '/images/carrera/podio.jpg',
     '/images/carrera/podio1.jpg',
     '/images/carrera/carreramed6.jpg',
     '/images/carrera/carreramed7.jpg',
     '/images/carrera/carreramed4.jpg',
   ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Recorrido (imagen fija con zoom)
+  const [showRouteImage, setShowRouteImage] = useState(true);
+  const [routeZoomed, setRouteZoomed] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,32 +74,24 @@ const HeroSection = () => {
     return () => clearInterval(interval);
   }, [images.length]);
 
+  // Cerrar el zoom con Esc y bloquear el scroll del fondo mientras está abierto
+  useEffect(() => {
+    if (!routeZoomed) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setRouteZoomed(false);
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [routeZoomed]);
+
   const nextImage = () => setCurrentImageIndex((prev) => (prev + 1) % images.length);
   const prevImage = () =>
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
 
   const handleRegistro = () => navigate('/registro');
-
-  const schedule = [
-    { time: '6:00 AM', activity: 'Llegada al punto de encuentro', icon: Calendar },
-    { time: '7:00 AM', activity: 'Salida oficial de la carrera', icon: Users },
-    { time: '09:00 AM', activity: 'Premiación', icon: Trophy },
-  ];
-
-  const categories = [
-    {
-      name: 'Varonil',
-      description: 'Para profesionales de la salud y público en general',
-      price: 'Inscripción gratuita',
-      note: 'Lleva ropa cómoda y calienta adecuadamente',
-    },
-    {
-      name: 'Femenil',
-      description: 'Para profesionales de la salud y público en general',
-      price: 'Inscripción gratuita',
-      note: 'Lleva ropa cómoda y calienta adecuadamente',
-    },
-  ];
 
   const countdownItems = [
     { value: timeLeft.days, label: 'Días' },
@@ -109,7 +104,7 @@ const HeroSection = () => {
     <div className="pt-22 md:pt-20">
       {/* ============ HERO ============ */}
       <div className="relative overflow-hidden">
-        {/* Fondo animado con gradientes médicos */}
+        {/* Fondo con gradientes médicos */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-400" />
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-800/40 to-blue-400/30" />
@@ -117,38 +112,46 @@ const HeroSection = () => {
         </div>
 
         <div className="relative z-10 text-white">
-          <div className="container mx-auto px-4 pt-14 pb-10 md:pt-20 md:pb-16">
+          <div className="container mx-auto px-4 pt-8 pb-6 md:pt-12 md:pb-10">
             {/* Título */}
-            <div className="text-center mb-6 animate-fade-in-up">
+            <div className="text-center mb-4 animate-fade-in-up">
               <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-tight bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent">
-                XXXIII Carrera "Día Del Médico"
+                XXXIII Carrera Anual "Día Del Médico"
               </h1>
-              <p className="mt-3 text-sm sm:text-lg md:text-4xl font-light text-blue-100 max-w-2xl mx-auto">
-                ¡Corre trota, camina, rueda pero... llega!
+              <span className="block mt-1 text-lg sm:text-2xl md:text-4xl font-bold text-blue-200">
+                Edición 2026
+              </span>
+              <p className="mt-2 text-sm sm:text-base md:text-xl font-light text-blue-100 max-w-2xl mx-auto">
+                La constancia y perseverancia en el ejercicio dan más vida a tus años, y años a tu vida.
               </p>
             </div>
 
-            {/* Fecha y ubicación */}
-            <div className="flex flex-col items-center gap-3 mb-6 text-sm sm:text-base">
-              <div className="flex items-center gap-2 bg-blue-900/60 px-5 py-2.5 rounded-full backdrop-blur-md border border-blue-400/30">
+            {/* Fecha y ubicación: en una sola fila desde sm */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-2 mb-5 text-sm sm:text-base">
+              <div className="flex items-center gap-2 bg-blue-900/60 px-4 py-2 rounded-full backdrop-blur-md border border-blue-400/30">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
-                <span className="font-semibold text-blue-100">25 de Octubre, 2026</span>
+                <span className="font-semibold text-blue-100">24 de Octubre, 2026</span>
               </div>
               <a
                 href="https://share.google/kiqf73sfJqLAGAsp3"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-blue-900/60 px-5 py-2.5 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-colors"
+                className="flex items-center gap-2 bg-blue-900/60 px-4 py-2 rounded-full backdrop-blur-md border border-blue-400/30 hover:bg-blue-800/80 transition-colors"
               >
                 <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
                 <span className="font-semibold text-blue-100 underline text-center">{location}</span>
               </a>
             </div>
 
-            {/* Momentos Memorables */}
-            <div className="mb-8 max-w-xl mx-auto">
-              <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-5 border border-blue-400/20 shadow-2xl">
-                <h3 className="text-base sm:text-xl font-bold mb-3 text-blue-100 text-center">
+            {/* Momentos Memorables + Recorrido: lado a lado en escritorio */}
+            <div
+              className={`grid gap-4 mb-5 mx-auto items-start ${
+                showRouteImage ? 'max-w-xl lg:max-w-5xl lg:grid-cols-2' : 'max-w-xl'
+              }`}
+            >
+              {/* Momentos Memorables */}
+              <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-3 sm:p-4 border border-blue-400/20 shadow-2xl">
+                <h3 className="text-base sm:text-lg font-bold mb-2 text-blue-100 text-center">
                   Momentos Memorables
                 </h3>
                 <div className="relative aspect-video rounded-xl overflow-hidden shadow-xl">
@@ -190,19 +193,59 @@ const HeroSection = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Recorrido */}
+              {showRouteImage && (
+                <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-3 sm:p-4 border border-blue-400/20 shadow-2xl">
+                  <h3 className="text-base sm:text-lg font-bold mb-2 text-blue-100 text-center flex items-center justify-center gap-2">
+                    <Route className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
+                    Recorrido
+                  </h3>
+
+                  <button
+                    type="button"
+                    onClick={() => setRouteZoomed(true)}
+                    aria-label="Ampliar imagen del recorrido"
+                    className="group relative block w-full rounded-xl overflow-hidden shadow-xl bg-blue-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300/50"
+                  >
+                    {/* Fondo difuminado para rellenar espacios */}
+                    <img
+                      src={ROUTE_IMAGE}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
+                    />
+                    {/* Imagen completa, sin recortar */}
+                    <img
+                      src={ROUTE_IMAGE}
+                      alt="Mapa del recorrido de la carrera"
+                      loading="lazy"
+                      onError={() => setShowRouteImage(false)}
+                      className="relative z-10 w-full h-auto max-h-[50vh] lg:max-h-[60vh] object-contain mx-auto transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                    <span className="absolute bottom-2 right-2 z-20 flex items-center gap-1 bg-black/60 text-white text-[10px] sm:text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                      <ZoomIn className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      Ampliar
+                    </span>
+                  </button>
+
+                  <p className="mt-2 text-xs sm:text-sm text-blue-100 text-center">
+                    Salida: Parque Central · Meta: Parque Caña Hueca · Aprox. 5 km
+                  </p>
+                </div>
+              )}
             </div>
-                        
-            
+
             {/* Cuenta regresiva — una sola fila, incluso en móvil */}
-            <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-3 sm:p-5 border border-blue-400/20 shadow-2xl max-w-xl mx-auto mb-6">
-              <h3 className="text-sm sm:text-lg font-bold mb-3 text-blue-100 text-center uppercase tracking-wide">
+            <div className="bg-blue-900/70 backdrop-blur-xl rounded-2xl p-3 border border-blue-400/20 shadow-2xl max-w-xl mx-auto mb-5">
+              <h3 className="text-xs sm:text-base font-bold mb-2 text-blue-100 text-center uppercase tracking-wide">
                 Cuenta Regresiva
               </h3>
               <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
                 {countdownItems.map((item) => (
                   <div
                     key={item.label}
-                    className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg sm:rounded-xl px-1 py-2 sm:p-3 border border-blue-400/30 shadow-lg text-center"
+                    className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg sm:rounded-xl px-1 py-2 sm:py-2.5 border border-blue-400/30 shadow-lg text-center"
                   >
                     <div className="text-lg sm:text-3xl font-black text-white leading-none">
                       {String(item.value || 0).padStart(2, '0')}
@@ -216,16 +259,16 @@ const HeroSection = () => {
             </div>
 
             {/* Botón de registro */}
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-2">
               <button
                 type="button"
                 onClick={handleRegistro}
-                className="bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 hover:from-blue-300 hover:via-blue-400 hover:to-blue-600 text-white px-8 py-4 sm:px-10 sm:py-5 rounded-full text-base sm:text-xl font-black transition-transform duration-300 active:scale-95 shadow-2xl"
+                className="bg-gradient-to-r from-blue-400 via-blue-500 to-blue-700 hover:from-blue-300 hover:via-blue-400 hover:to-blue-600 text-white px-8 py-3 sm:px-10 sm:py-4 rounded-full text-base sm:text-xl font-black transition-transform duration-300 active:scale-95 shadow-2xl"
               >
                 ¡Regístrate Ahora!
               </button>
               <p className="text-xs sm:text-sm text-blue-100">
-                ¡¡¡ Disfruta de este evento deportiva en compañia de tus médicos, amigos y familia !!!
+                ¡Cupos limitados! Asegura tu lugar en la carrera más esperada del año.
               </p>
             </div>
           </div>
@@ -235,7 +278,7 @@ const HeroSection = () => {
         <div className="relative z-0">
           <svg
             viewBox="0 0 1440 120"
-            className="w-full h-12 md:h-24"
+            className="w-full h-8 md:h-16"
             style={{ fill: 'url(#hero-footer-gradient)' }}
             preserveAspectRatio="none"
           >
@@ -251,108 +294,30 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* ============ CONGRESOS Y REUNIONES ============ */}
-      <div className="bg-blue-950 py-8 md:py-12">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-6 md:mb-8">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-100">
-              Congresos y Reuniones Médicas
-            </h2>
-            <p className="mt-2 text-sm sm:text-base text-gray-400 max-w-2xl mx-auto">
-              Nuestra comunidad médica también se reúne para seguir creciendo y actualizándose, se parte de estos eventos. 
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-5 md:gap-6 max-w-2xl mx-auto">
-            {[
-              { 
-                src: '/images/congresos/congreso_enfermedades.jpeg', 
-                alt: 'Congreso de Enfermedades', 
-                label: 'Congreso de Enfermedades',
-                link: 'https://docs.google.com/forms/d/e/1FAIpQLSfSkCzLlzVhyhX6XnK3GySTD1Cnc6HjmASY084w8CcJNS-SUA/viewform?usp=dialog',
-                buttonText: 'Inscríbete al Congreso'
-              },
-              { 
-                src: '/images/congresos/reunion_regional.jpeg', 
-                alt: 'Reunión Regional', 
-                label: 'Reunión Regional',
-                link: 'https://docs.google.com/forms/d/e/1FAIpQLSd9GLTrAKIqEvYhEkUtmMneY8y3ovl46pQH9nDuYnexSnWnUQ/viewform?usp=dialog',
-                buttonText: 'Inscríbete a la Reunión'
-              },
-            ].map((item) => (
-              <div
-                key={item.src}
-                className="group relative overflow-hidden rounded-2xl shadow-xl border border-blue-900/40 bg-blue-900 flex flex-col justify-between"
-              >
-                {/* Contenedor de la imagen */}
-                <div className="relative aspect-[3/4] sm:aspect-[9/16] overflow-hidden">
-                  <img
-                    src={item.src}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50"
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                  <div className="absolute inset-0 bg-blue-950/40" />
-
-                  {/* Imagen completa, sin recortar */}
-                  <img
-                    src={item.src}
-                    alt={item.alt}
-                    className="relative z-10 w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-500"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/images/patrocinadores/logo-provisional.svg';
-                      e.target.className = 'relative z-10 w-full h-full object-contain p-8';
-                    }}
-                  />
-
-                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-blue-950/90 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-                    <p className="text-gray-100 font-bold text-sm sm:text-base drop-shadow mb-3">
-                      {item.label}
-                    </p>
-                    {/* Botón de redirección integrado sobre cada imagen */}
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm shadow-lg transition-colors pointer-events-auto"
-                    >
-                      <span>{item.buttonText}</span>
-                      <ExternalLink className="w-4 h-4 shrink-0" />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ============ PATROCINADORES Y COMITÉ ORGANIZADOR ============ */}
-      <div className="bg-gradient-to-r from-blue-800 via-blue-700 to-blue-800 py-8 md:py-12">
-        <div className="container mx-auto px-4">
+      {/* Zoom del recorrido (pantalla completa) */}
+      {routeZoomed && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Recorrido ampliado"
+          onClick={() => setRouteZoomed(false)}
+          className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-3 sm:p-6 cursor-zoom-out"
+        >
           <button
             type="button"
-            onClick={() => navigate('/patrocinadores')}
-            className="group flex items-center justify-center gap-3 sm:gap-4 mx-auto max-w-xl w-full bg-blue-900/40 hover:bg-blue-900/60 rounded-full px-5 py-3 sm:px-8 sm:py-4 border border-blue-400/30 transition-colors"
+            onClick={() => setRouteZoomed(false)}
+            aria-label="Cerrar"
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
           >
-            <span className="flex -space-x-2">
-              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-500/40 flex items-center justify-center ring-2 ring-blue-800/60">
-                <Award className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-blue-100" />
-              </span>
-              <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-500/40 flex items-center justify-center ring-2 ring-blue-800/60">
-                <Users className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-blue-100" />
-              </span>
-            </span>
-            <span className="text-xs sm:text-base font-semibold text-blue-100 text-center">
-              Conoce a nuestros patrocinadores y comité organizador
-            </span>
-            <ChevronRight className="w-4 h-4 text-blue-200 group-hover:translate-x-0.5 transition-transform shrink-0" />
+            <X className="w-6 h-6" />
           </button>
+          <img
+            src={ROUTE_IMAGE}
+            alt="Mapa del recorrido de la carrera"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          />
         </div>
-      </div>
+      )}
 
       <style jsx>{`
         @keyframes fade-in-up {
@@ -365,7 +330,7 @@ const HeroSection = () => {
             transform: translateY(0);
           }
         }
-          
+
         .animate-fade-in-up {
           animation: fade-in-up 0.8s ease-out;
         }
