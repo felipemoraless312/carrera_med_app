@@ -51,8 +51,8 @@ const TRIPTICO_PDF = '/images/triptico.pdf';
 const COMITE_IMAGE = '/images/comite/comite4.jpg';
 
 // Fecha del evento: el contador y el texto en pantalla usan la misma fecha
-const EVENT_DATE = '2026-10-24T07:00:00';
-const EVENT_DATE_LABEL = '24 de Octubre, 2026';
+const EVENT_DATE = '2026-10-25T07:00:00';
+const EVENT_DATE_LABEL = '25 de Octubre, 2026';
 
 const CONGRESOS = [
   {
@@ -168,13 +168,10 @@ const HeroSection = () => {
             {/* Título */}
             <div className="text-center mb-4 animate-fade-in-up">
               <h1 className="text-2xl sm:text-4xl md:text-6xl font-black leading-tight bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent">
-                XXXIII Carrera Anual "Día Del Médico"
+                XXXIII Carrera "Día Del Médico"
               </h1>
-              <span className="block mt-1 text-lg sm:text-2xl md:text-4xl font-bold text-blue-200">
-                Edición 2026
-              </span>
               <p className="mt-2 text-sm sm:text-base md:text-xl font-light text-blue-100 max-w-2xl mx-auto">
-                La constancia y perseverancia en el ejercicio dan más vida a tus años, y años a tu vida.
+                ¡ Corre, trota, camina, rueda pero ... llega !
               </p>
             </div>
 
@@ -320,7 +317,7 @@ const HeroSection = () => {
                 ¡Regístrate Ahora!
               </button>
               <p className="text-xs sm:text-sm text-blue-100">
-                ¡Cupos limitados! Asegura tu lugar en la carrera más esperada del año.
+                ¡Diviértete con tus médicos, familia y amigos!
               </p>
             </div>
 
