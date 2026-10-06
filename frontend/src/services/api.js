@@ -426,16 +426,56 @@ export const downloadUtils = {
     }
   },
 
-  // Descargar imagen de participante
-  async downloadParticipantImage(numeroParticipante, nombreParticipante) {
+  // Descargar PDF tamaño carta listo para imprimir: número en la mitad superior, la otra mitad en blanco
+  async downloadParticipantPdf(numeroParticipante, nombreParticipante) {
     try {
       const blob = await apiService.descargarImagen(numeroParticipante, nombreParticipante);
-      const filename = `participante_${numeroParticipante}_${nombreParticipante.replace(/\s+/g, '_')}.png`;
-      
-      this.downloadBlob(blob, filename);
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = dataUrl;
+      });
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+
+      // Convertir a JPEG para que el PDF pese poco (el PNG sin comprimir dentro del PDF pesa ~8 MB)
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0);
+      const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+      const pageW = 215.9;
+      const halfH = 279.4 / 2;
+
+      // Ajustar la imagen a media carta sin deformarla y centrarla
+      const scale = Math.min(pageW / width, halfH / height);
+      const imgW = width * scale;
+      const imgH = height * scale;
+      pdf.addImage(jpegDataUrl, 'JPEG',(pageW - imgW) / 2, (halfH - imgH) / 2, imgW, imgH);
+
+      // Línea punteada de corte entre las dos mitades
+      pdf.setDrawColor(160);
+      pdf.setLineDashPattern([2, 2], 0);
+      pdf.line(0, halfH, pageW, halfH);
+
+      const filename = `numero_${numeroParticipante}_${nombreParticipante.replace(/\s+/g, '_')}.pdf`;
+      this.downloadBlob(pdf.output('blob'), filename);
     } catch (error) {
-      console.error('Error al descargar imagen del participante:', error);
-      throw error;
+      console.error('Error al generar el PDF del participante:', error);
+      throw new Error('No se pudo generar el PDF. Intente nuevamente.');
     }
   }
 };

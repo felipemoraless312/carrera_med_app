@@ -7,7 +7,16 @@ import { ArrowLeft, Maximize2, Lock, Search, RefreshCw, Trophy } from 'lucide-re
 const SIZE = 400;
 const C = SIZE / 2;
 const R = 190;
-const COLORS = ['#1E3A8A', '#1D4ED8', '#0F766E', '#4338CA'];
+// Tonos claros para la tómbola; el texto va en oscuro para que se lea bien
+const COLORS = ['#93C5FD', '#FDE68A', '#86EFAC', '#F9A8D4', '#C4B5FD', '#67E8F9'];
+const SLICE_TEXT = '#0F172A';
+
+// Evita que el último segmento quede junto al primero con el mismo color
+const sliceColor = (i, total) => {
+  const idx = i % COLORS.length;
+  if (i === total - 1 && total > 1 && idx === 0) return COLORS[2];
+  return COLORS[idx];
+};
 const IDLE_SPEED = 5;     // °/s cuando está en reposo (giro lento)
 const FAST_SPEED = 720;   // °/s al iniciar el sorteo
 const ACCEL = 900;        // °/s²
@@ -323,9 +332,9 @@ const RifaView = ({ onBack }) => {
                     <g key={i}>
                       <path
                         d={slicePath(i * seg, (i + 1) * seg)}
-                        fill={COLORS[i % COLORS.length]}
-                        stroke="#0A0E1A"
-                        strokeWidth="1.5"
+                        fill={sliceColor(i, slots.length)}
+                        stroke="#FFFFFF"
+                        strokeWidth="2"
                       />
                       <text
                         transform={`rotate(${(i + 0.5) * seg - 90} ${C} ${C})`}
@@ -334,7 +343,8 @@ const RifaView = ({ onBack }) => {
                         textAnchor="end"
                         dominantBaseline="middle"
                         fontSize={fontSize}
-                        fill="#F1F5F9"
+                        fontWeight="600"
+                        fill={SLICE_TEXT}
                       >
                         {truncate(name)}
                       </text>
@@ -343,11 +353,11 @@ const RifaView = ({ onBack }) => {
                 )}
               </g>
               {elegibles < 1 && (
-                <text x={C} y={C + 60} textAnchor="middle" fontSize="16" fill="#F1F5F9">
+                <text x={C} y={C + 60} textAnchor="middle" fontSize="16" fontWeight="600" fill={SLICE_TEXT}>
                   Sin participantes elegibles
                 </text>
               )}
-              <circle cx={C} cy={C} r="22" fill="#0A0E1A" stroke="#6C8EFF" strokeWidth="3" />
+              <circle cx={C} cy={C} r="22" fill="#FFFFFF" stroke="#3B82F6" strokeWidth="4" />
               <path d={`M${C - 14},6 L${C + 14},6 L${C},38 Z`} fill="#F5B942" stroke="#0A0E1A" strokeWidth="2" />
             </svg>
 

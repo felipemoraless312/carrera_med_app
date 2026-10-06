@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Request, Header
+﻿from fastapi import FastAPI, HTTPException, Depends, Request, Header
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +10,6 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
 from PIL import Image, ImageDraw, ImageFont
-import qrcode
 import tempfile
 from io import BytesIO
 import pathlib
@@ -24,7 +23,7 @@ RIFA_PIN = os.getenv("RIFA_PIN", "")
 ESTADOS_GANADOR = {"pendiente", "entregado", "anulado"}
 DATA_DIR = pathlib.Path('data')
 DB_NAME = str(DATA_DIR / 'carrera_medico.db')
-BASE_IMG_PATH = 'app/plantilla_nueva.png'
+BASE_IMG_PATH = 'app/XXX.png'
 
 # Validación simple y permisiva de correo electrónico
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -33,19 +32,22 @@ EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 FONT_BOLD_PATH = 'app/fonts/Poppins-Bold.ttf'
 FONT_REGULAR_PATH = 'app/fonts/Poppins-Regular.ttf'
 
-QR_BOX = (181, 600, 898, 1317)  # left, top, right, bottom
-NUMERO_POS = (540, 1435)  # centro (x, y)
-NOMBRE_POS = (540, 1555)  # centro (x, y)
+# Coordenadas sobre la plantilla horizontal XXX.png (2000 x 1414)
+NOMBRE_POS = (1016, 579)  # centro (x, y) de la franja gris oscura (x 251-1782, y 486-671)
+NOMBRE_MAX_WIDTH = 1450
+NUMERO_POS = (1000, 919)  # centro (x, y) del panel claro debajo de la franja (x 142-1858, y 673-1165)
+NUMERO_MAX_WIDTH = 1500
+NUMERO_MAX_HEIGHT = 400
 
 SECTORES_SALUD = [
-          "Medico",
-          "Medico especialista",
+          "Médico",
+          "Médico especialista",
           "Estudiante de medicina",
-          "Medico interno",
-          "Medico en servicio social",
-          "Medico residente",
-          "Paramedico",
-          "Tecnico en enfermería",
+          "Médico interno",
+          "Médico en servicio social",
+          "Médico residente",
+          "Paramédico",
+          "Técnico en enfermería",
           "Lic. en enfermería",
           "Enfermera especialista",
           "Otro sector de salud",
@@ -182,8 +184,21 @@ def verificar_limite_registros():
     finally:
         con.close()
 
+def fuente_ajustada(draw, texto: str, font_path: str, tamano_max: int, ancho_max: int):
+    """Devuelve la fuente más grande (hasta tamano_max) con la que el texto cabe en ancho_max"""
+    try:
+        tamano = tamano_max
+        font = ImageFont.truetype(font_path, tamano)
+        while tamano > 20 and draw.textlength(texto, font=font) > ancho_max:
+            tamano -= 4
+            font = ImageFont.truetype(font_path, tamano)
+        return font
+    except Exception:
+        return ImageFont.load_default()
+
+
 def generar_numero_participante(participante_id: int, nombre: str):
-    """Genera la imagen con el número, nombre y QR del participante"""
+    """Genera la imagen con el número y nombre del participante"""
     try:
         # Si existe imagen base personalizada, usarla; si no, crear una imagen básica
         if os.path.exists(BASE_IMG_PATH):
@@ -195,39 +210,19 @@ def generar_numero_participante(participante_id: int, nombre: str):
 
         draw = ImageDraw.Draw(img)
 
-        # --- Generar QR (por ahora solo codifica el número de folio) ---
         numero_formateado = f"{participante_id:04d}"
 
-        qr = qrcode.QRCode(
-            version=None,  # ajusta automáticamente el tamaño al contenido
-            error_correction=qrcode.constants.ERROR_CORRECT_L,  # baja densidad, escaneo rápido
-            box_size=10,
-            border=2,
-        )
-        qr.add_data(numero_formateado)
-        qr.make(fit=True)
-        qr_img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
-
-        qr_size_original = QR_BOX[2] - QR_BOX[0]
-        qr_size = int(qr_size_original * 0.95)
-        qr_img = qr_img.resize((qr_size, qr_size), Image.LANCZOS)
-
-        # Centrar el QR dentro del recuadro original
-        offset_x = QR_BOX[0] + (qr_size_original - qr_size) // 2
-        offset_y = QR_BOX[1] + (qr_size_original - qr_size) // 2
-        img.paste(qr_img, (offset_x, offset_y))
-
-        # --- Fuentes propias (empaquetadas), con fallback seguro ---
-        try:
-            font_numero = ImageFont.truetype(FONT_BOLD_PATH, 80)
-            font_nombre = ImageFont.truetype(FONT_REGULAR_PATH, 40)
-        except Exception:
-            font_numero = ImageFont.load_default()
-            font_nombre = ImageFont.load_default()
-
         # --- Número y nombre en las coordenadas de la plantilla ---
-        draw.text(NUMERO_POS, numero_formateado, font=font_numero, fill='white', anchor='mm')
-        draw.text(NOMBRE_POS, nombre, font=font_nombre, fill='white', anchor='mm')
+        # Número en azul marino para que se lea también impreso en blanco y negro
+        font_numero = fuente_ajustada(draw, numero_formateado, FONT_BOLD_PATH, 600, NUMERO_MAX_WIDTH)
+        while font_numero.size > 20:
+            top, bottom = draw.textbbox((0, 0), numero_formateado, font=font_numero, anchor='mm')[1::2]
+            if bottom - top <= NUMERO_MAX_HEIGHT:
+                break
+            font_numero = ImageFont.truetype(FONT_BOLD_PATH, font_numero.size - 10)
+        font_nombre = fuente_ajustada(draw, nombre.upper(), FONT_BOLD_PATH, 90, NOMBRE_MAX_WIDTH)
+        draw.text(NUMERO_POS, numero_formateado, font=font_numero, fill='#0b1f4d', anchor='mm')
+        draw.text(NOMBRE_POS, nombre.upper(), font=font_nombre, fill='white', anchor='mm')
 
         # Guardar imagen en memoria
         img_bytes = BytesIO()

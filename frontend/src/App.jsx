@@ -36,7 +36,7 @@ const App = () => {
             
             {/* Rutas secretas de administración */}
             <Route 
-              path="/control-asistencia-2025" 
+              path="/control-asistencia-2026"
               element={<AttendanceView onBack={() => window.history.back()} />} 
             />
             <Route 

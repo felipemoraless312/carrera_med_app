@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Gift } from 'lucide-react';
+import { Heart, Gift, MapPin } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
 import { apiService } from '../services/api';
 
@@ -18,11 +18,6 @@ const REGISTRATION_STEPS = [
     step: '3',
     title: 'Dale clic para finalizar',
     description: 'Obtén tu número de participante'
-  },
-  {
-    step: '4',
-    title: 'Descarga tu imagen',
-    description: '¡Y prepárate para correr!'
   }
 ];
 
@@ -119,7 +114,38 @@ const RegistrationSection = ({ setActiveSection }) => {
                   Usa tus datos personales reales
                 </p>
                 <p className="mt-1 text-xs md:text-sm text-gray-300 leading-snug">
-                  Tu nombre y número de celular son necesarios para reclamar premios en la tómbola de premios.
+                  Tu nombre y número de celular son necesarios para reclamar premios en la tómbola de premios,
+                  que se realizará de manera <span className="font-bold text-amber-200">digital</span>.
+                </p>
+              </div>
+            </div>
+
+            {/* Aviso de entrega de números en el consultorio del Dr. Ramos Narváez */}
+            <div
+              role="note"
+              className="mt-3 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3 md:p-4"
+            >
+              <MapPin className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
+              <div>
+                <p className="text-sm md:text-base font-black text-green-200 leading-tight">
+                  Entrega de números en el consultorio del Dr. Francisco Ramos Narváez
+                </p>
+                <p className="mt-1 text-xs md:text-sm text-gray-300 leading-snug">
+                  Los números de participante se entregarán en el consultorio del{' '}
+                  <span className="font-bold text-gray-100">Dr. Francisco Ramos Narváez</span>. Al registrarte obtienes tu número;
+                  preséntate con tu nombre o número de participante para recogerlo.
+                </p>
+                <p className="mt-2 text-xs md:text-sm text-gray-300 leading-snug">
+                  <a
+                    href="https://maps.app.goo.gl/DGZKGP9dpCddKzTa9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-green-200"
+                  >
+                    2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez
+                  </a>
+                  {' '}· Tel.{' '}
+                  <a href="tel:9616136666" className="underline hover:text-green-200">(961) 61 3 66 66</a>
                 </p>
               </div>
             </div>
@@ -139,7 +165,7 @@ const RegistrationSection = ({ setActiveSection }) => {
                 {REGISTRATION_OPEN ? 'Inscríbete Aquí' : 'Inscripciones cerradas'}
               </button>
               <p className="mt-2 text-center text-gray-400 text-xs md:text-sm">
-                ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante!
+                ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante impreso!
               </p>
             </div>
           </div>

@@ -173,6 +173,9 @@ const HeroSection = () => {
               <p className="mt-2 text-sm sm:text-base md:text-xl font-light text-blue-100 max-w-2xl mx-auto">
                 ¡ Corre, trota, camina, rueda pero ... llega !
               </p>
+              <p className="mt-2 text-xs sm:text-sm md:text-lg italic text-blue-200 max-w-2xl mx-auto">
+                “La constancia y perseverancia en el ejercicio dan más vida a tus años y más años a tu vida”
+              </p>
             </div>
 
             {/* Fecha y ubicación: en una sola fila desde sm */}

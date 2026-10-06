@@ -21,6 +21,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   const [participantData, setParticipantData] = useState(null);
   // Estado de carga de la imagen mostrada: 'loading' | 'loaded' | 'error'
   const [imageStatus, setImageStatus] = useState('loading');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Cargar sectores desde la API
   useEffect(() => {
@@ -32,14 +33,14 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         console.error('Error al cargar sectores:', error);
         // Fallback si no se pueden cargar desde la API
         setSectoresSalud([
-          "Medico",
-          "Medico especialista",
+          "Médico",
+          "Médico especialista",
           "Estudiante de medicina",
-          "Medico interno",
-          "Medico en servicio social",
-          "Medico residente",
-          "Paramedico",
-          "Tecnico en enfermería",
+          "Médico interno",
+          "Médico en servicio social",
+          "Médico residente",
+          "Paramédico",
+          "Técnico en enfermería",
           "Lic. en enfermería",
           "Enfermera especialista",
           "Otro sector de salud",
@@ -119,23 +120,24 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     }
   };
 
-  const downloadImage = async () => {
+  // Descarga el PDF tamaño carta listo para imprimir (número en la mitad superior)
+  const downloadPdf = async () => {
     if (!participantData) {
       console.error('No hay datos del participante');
       return;
     }
 
+    setIsGeneratingPdf(true);
     try {
-      
-      // Usar el servicio API para descargar la imagen
-      await downloadUtils.downloadParticipantImage(participantData.numero, participantData.nombre);
-
+      await downloadUtils.downloadParticipantPdf(participantData.numero, participantData.nombre);
     } catch (error) {
-      console.error('Error al descargar imagen:', error);
+      console.error('Error al descargar PDF:', error);
       setRegistrationResult({
         type: 'error',
         message: error.message
       });
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -164,7 +166,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
             </h2>
             <p className="text-gray-300">
               {isSuccess
-                ? 'Guarde su imagen y conserve sus datos'
+                ? 'Recoja su número de participante en el consultorio del Dr. Francisco Ramos Narváez'
                 : 'Complete el formulario para obtener su número de participante'}
             </p>
           </div>
@@ -218,24 +220,56 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
                   {imageStatus === 'error' && (
                     <p className="mb-4 text-sm text-amber-200 text-center">
-                      No pudimos mostrar la imagen aquí. Use el botón para descargarla.
+                      No pudimos mostrar la imagen aquí. Use el botón para descargar su número en PDF.
                     </p>
                   )}
 
                   <button
                     type="button"
-                    onClick={downloadImage}
-                    className="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
+                    onClick={downloadPdf}
+                    disabled={isGeneratingPdf}
+                    className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-70 disabled:cursor-wait text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
                   >
-                    <Download className="w-5 h-5 mr-2" />
-                    Descargar Número de Participante
+                    {isGeneratingPdf ? (
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="w-5 h-5 mr-2" />
+                    )}
+                    {isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF para imprimir'}
                   </button>
 
-                  {imageStatus === 'loaded' && (
-                    <p className="mt-2 text-xs text-gray-400 text-center">
-                      ¿No se descargó? Mantenga presionada la imagen para guardarla o tome una captura de pantalla.
-                    </p>
-                  )}
+                  {/* Entrega del número en el consultorio del Dr. Ramos Narváez */}
+                  <div
+                    role="note"
+                    className="mt-4 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3"
+                  >
+                    <MapPin className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
+                    <div className="text-sm">
+                      <p className="font-black text-green-200 leading-tight">
+                        Recoja su número en el consultorio del Dr. Francisco Ramos Narváez
+                      </p>
+                      <p className="mt-1 text-gray-300 leading-snug">
+                        Su número de participante se entregará en el consultorio del{' '}
+                        <span className="font-bold text-gray-100">Dr. Francisco Ramos Narváez</span>. Preséntese con su nombre o número de participante.
+                      </p>
+                      <p className="mt-2 text-gray-300 leading-snug">
+                        <a
+                          href="https://maps.app.goo.gl/DGZKGP9dpCddKzTa9"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-green-200"
+                        >
+                          2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez
+                        </a>
+                        {' '}· Tel.{' '}
+                        <a href="tel:9616136666" className="underline hover:text-green-200">(961) 61 3 66 66</a>
+                      </p>
+                      <ul className="mt-2 text-gray-300 space-y-1 leading-snug">
+                        <li>• Llévelo al frente de su playera, visible y sin doblar, el día de la carrera.</li>
+                        <li>• Sujételo con seguros (alfileres de seguridad) en las cuatro esquinas.</li>
+                      </ul>
+                    </div>
+                  </div>
 
                   {/* Recordatorio de la tómbola */}
                   <div
@@ -244,10 +278,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                   >
                     <div className="text-sm">
                       <p className="font-black text-amber-200 leading-tight">
-                        Recuerde sus datos para la tómbola
+                        Recuerde sus datos para la tómbola digital
                       </p>
                       <p className="mt-1 text-gray-300 leading-snug">
-                        Sus datos personales se usarán para corroborar y reclamar premios. Registrado como:
+                        La tómbola de premios se realizará de manera digital. Sus datos personales se usarán para corroborar y reclamar premios. Registrado como:
                       </p>
                       <p className="mt-1 text-gray-100 font-bold break-words">
                         {participantData.nombre} · {participantData.telefono}
@@ -425,9 +459,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
               <div className="bg-blue-950/50 p-4 rounded-xl border border-blue-800/30">
                 <h4 className="font-bold text-gray-200 mb-2">Información importante:</h4>
                 <ul className="text-sm text-gray-300 space-y-1">
-                  <li>• Use sus datos personales reales: su nombre y número de celular son necesarios para reclamar premios en la tómbola</li>
+                  <li>• Use sus datos personales reales: su nombre y número de celular son necesarios para reclamar premios en la tómbola, que se realizará de manera digital</li>
                   <li>• Solo se permite un registro por número de teléfono</li>
                   <li>• Conserve su número de participante y el teléfono con el que se registró para el día de la carrera</li>
+                  <li>• Los números se entregarán en el consultorio del Dr. Francisco Ramos Narváez (2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez · Tel. (961) 61 3 66 66)</li>
                 </ul>
               </div>
 

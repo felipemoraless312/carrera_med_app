@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Search, CheckCircle, XCircle, RefreshCw, ArrowLeft,
-  ChevronLeft, ChevronRight, Wrench, Percent
+  ChevronLeft, ChevronRight, ChevronDown, Wrench, Download, Loader2,
+  Phone, PhoneCall, Mail, MapPin, Briefcase, HeartPulse, Calendar, User
 } from 'lucide-react';
 import { useAttendance } from '../hooks/useApi';
+import { downloadUtils } from '../services/api';
+
+const EVENT_YEAR = 2026;
 
 // ---------------------------------------------------------------------------
 // Sub-componentes de visualización (sin dependencias externas)
@@ -96,6 +100,78 @@ const avatarPalette = (sexo) => {
   return { bg: 'rgba(255,255,255,0.08)', text: '#B9C0D4' };
 };
 
+// Fechas de SQLite ("2026-10-06 00:22:05") o ISO
+const formatFecha = (fecha) => {
+  if (!fecha) return null;
+  const d = new Date(String(fecha).replace(' ', 'T'));
+  if (Number.isNaN(d.getTime())) return fecha;
+  return d.toLocaleString('es-MX', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+};
+
+const tieneCondicion = (p) =>
+  Boolean(p.condiciones_salud && p.condiciones_salud.trim() && p.condiciones_salud !== 'Ninguna');
+
+const DetailItem = ({ icon: Icon, label, children, highlight = false }) => (
+  <div className={`flex items-start gap-2.5 rounded-xl p-3 border ${
+    highlight ? 'bg-[#C94B45]/10 border-[#C94B45]/30' : 'bg-black/20 border-white/[0.06]'
+  }`}>
+    <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${highlight ? 'text-red-300' : 'text-gray-500'}`} />
+    <div className="min-w-0">
+      <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
+      <div className={`text-sm break-words ${highlight ? 'text-red-200 font-medium' : 'text-gray-200'}`}>
+        {children || <span className="text-gray-600">Sin dato</span>}
+      </div>
+    </div>
+  </div>
+);
+
+// Toda la información capturada en el registro
+const ParticipantDetails = ({ participante: p }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+    <DetailItem icon={Phone} label="Teléfono">
+      {p.telefono && <a href={`tel:${p.telefono}`} className="font-mono hover:text-[#8FA0FF]">{p.telefono}</a>}
+    </DetailItem>
+    <DetailItem icon={PhoneCall} label="Tel. de emergencia">
+      {p.telefono_emergencia && (
+        <a href={`tel:${p.telefono_emergencia}`} className="font-mono hover:text-[#8FA0FF]">{p.telefono_emergencia}</a>
+      )}
+    </DetailItem>
+    <DetailItem icon={Mail} label="Correo">
+      {p.correo && <a href={`mailto:${p.correo}`} className="hover:text-[#8FA0FF]">{p.correo}</a>}
+    </DetailItem>
+    <DetailItem icon={MapPin} label="Ciudad">{p.ciudad}</DetailItem>
+    <DetailItem icon={User} label="Sexo">{p.sexo}</DetailItem>
+    <DetailItem icon={Briefcase} label="Profesión / sector">{p.sector_profesional}</DetailItem>
+    <DetailItem icon={HeartPulse} label="Condiciones de salud" highlight={tieneCondicion(p)}>
+      {p.condiciones_salud || 'Ninguna'}
+    </DetailItem>
+    <DetailItem icon={Calendar} label="Fecha de registro">{formatFecha(p.fecha_registro)}</DetailItem>
+    <DetailItem icon={CheckCircle} label="Llegada registrada">
+      {p.asistio ? (formatFecha(p.fecha_asistencia) || 'Sí') : 'Aún no llega'}
+    </DetailItem>
+  </div>
+);
+
+const PdfButton = ({ participante, downloadingId, onDownload, compact = false }) => {
+  const isDownloading = downloadingId === participante.id;
+  return (
+    <button
+      type="button"
+      onClick={() => onDownload(participante)}
+      disabled={isDownloading}
+      title="Descargar PDF del número para imprimir"
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors bg-[#4F63D2] hover:bg-[#5A70E8] disabled:opacity-60 disabled:cursor-wait text-white ${
+        compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm'
+      }`}
+    >
+      {isDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+      {isDownloading ? 'Generando...' : 'PDF'}
+    </button>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Vista principal
 // ---------------------------------------------------------------------------
@@ -107,6 +183,9 @@ const AttendanceView = ({ onBack }) => {
   const [saving, setSaving] = useState(false);
   const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [globalSearching, setGlobalSearching] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [pdfError, setPdfError] = useState(null);
   const [debugInfo, setDebugInfo] = useState({
     totalFetched: 0,
     pagesRequested: 0,
@@ -147,20 +226,37 @@ const AttendanceView = ({ onBack }) => {
   }, [participantes, isGlobalSearch, searchTerm]);
 
   const toggleAsistencia = async (id) => {
-    const participante = participantes.find(p => p.id === id);
+    // Buscar también en los resultados de búsqueda global (pueden no estar en la página actual)
+    const participante = filteredParticipantes.find(p => p.id === id) || participantes.find(p => p.id === id);
     if (!participante) return;
 
     const nuevoEstado = !participante.asistio;
 
     try {
       await updateAsistencia(id, nuevoEstado);
+      const fecha = nuevoEstado ? new Date().toISOString() : null;
       setFilteredParticipantes(prev => prev.map(p =>
-        p.id === id ? { ...p, asistio: nuevoEstado } : p
+        p.id === id ? { ...p, asistio: nuevoEstado, fecha_asistencia: fecha } : p
       ));
     } catch (error) {
       console.error('Error al actualizar asistencia:', error);
     }
   };
+
+  // Mismo PDF que recibe el corredor al registrarse (hoja carta, número en la mitad superior)
+  const handleDownloadPdf = async (participante) => {
+    setPdfError(null);
+    setDownloadingId(participante.id);
+    try {
+      await downloadUtils.downloadParticipantPdf(participante.numero_asignado, participante.nombre);
+    } catch {
+      setPdfError(`No se pudo generar el PDF de ${participante.nombre}. Intente nuevamente.`);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const toggleExpanded = (id) => setExpandedId(prev => (prev === id ? null : id));
 
   const handleMarcarTodos = async (estado) => {
     const idsParticipantes = filteredParticipantes.map(p => p.id);
@@ -522,7 +618,7 @@ const AttendanceView = ({ onBack }) => {
     : `página ${currentPage + 1}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] via-[#0D1326] to-[#080B14] py-4 sm:py-8 lg:py-14">
+    <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] via-[#0D1326] to-[#080B14] pt-24 pb-4 sm:pt-28 sm:pb-8 lg:pb-14">
       <div className="container mx-auto px-2 sm:px-4 lg:px-6 max-w-7xl">
 
         {/* Encabezado */}
@@ -535,8 +631,11 @@ const AttendanceView = ({ onBack }) => {
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" />
             </button>
             <div className="min-w-0">
+              <span className="inline-flex items-center gap-1.5 mb-1 px-2.5 py-0.5 rounded-full bg-[#3DDC97]/15 border border-[#3DDC97]/30 text-[#3DDC97] text-[11px] sm:text-xs font-semibold tracking-wide">
+                Carrera del Día del Médico {EVENT_YEAR}
+              </span>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-50 truncate tracking-tight">
-                Control de asistencia
+                Control de asistencia {EVENT_YEAR}
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 truncate">
                 Datos de {scopeLabel}
@@ -571,6 +670,18 @@ const AttendanceView = ({ onBack }) => {
             <button
               onClick={clearError}
               className="mt-2 px-3 py-1 bg-[#C94B45]/30 hover:bg-[#C94B45]/40 text-white rounded-lg text-xs sm:text-sm"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        {pdfError && (
+          <div className="bg-[#C94B45]/10 border border-[#C94B45]/40 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 flex items-center justify-between gap-3">
+            <p className="text-sm text-red-100">{pdfError}</p>
+            <button
+              onClick={() => setPdfError(null)}
+              className="px-3 py-1 bg-[#C94B45]/30 hover:bg-[#C94B45]/40 text-white rounded-lg text-xs flex-shrink-0"
             >
               Cerrar
             </button>
@@ -634,7 +745,7 @@ const AttendanceView = ({ onBack }) => {
                     ? "Buscando en toda la base de datos..."
                     : isGlobalSearch
                       ? "Resultados globales - edita para buscar de nuevo"
-                      : "Buscar por nombre, número o teléfono..."
+                      : "Buscar por nombre, número, teléfono, ciudad o correo..."
                 }
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -695,13 +806,14 @@ const AttendanceView = ({ onBack }) => {
                       <th className="px-6 py-3.5 text-left text-xs font-medium text-gray-500 border-b border-white/10">Participante</th>
                       <th className="px-6 py-3.5 text-left text-xs font-medium text-gray-500 border-b border-white/10">Número</th>
                       <th className="px-6 py-3.5 text-left text-xs font-medium text-gray-500 border-b border-white/10">Profesión</th>
-                      <th className="px-6 py-3.5 text-left text-xs font-medium text-gray-500 border-b border-white/10">Teléfono</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-medium text-gray-500 border-b border-white/10">Contacto</th>
+                      <th className="px-6 py-3.5 text-right text-xs font-medium text-gray-500 border-b border-white/10">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredParticipantes.length === 0 && isGlobalSearch && !globalSearching ? (
                       <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center">
+                        <td colSpan="6" className="px-6 py-12 text-center">
                           <div className="flex flex-col items-center">
                             <Search className="w-10 h-10 text-gray-600 mb-4" />
                             <h3 className="text-base font-medium text-gray-300 mb-1">Sin resultados</h3>
@@ -720,8 +832,10 @@ const AttendanceView = ({ onBack }) => {
                     ) : (
                       filteredParticipantes.map((participante) => {
                         const palette = avatarPalette(participante.sexo);
+                        const isExpanded = expandedId === participante.id;
                         return (
-                          <tr key={participante.id} className="hover:bg-white/[0.02] transition-colors">
+                          <React.Fragment key={participante.id}>
+                          <tr className={`transition-colors ${isExpanded ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'}`}>
                             <td className="px-6 py-3.5 border-b border-white/[0.06]">
                               <button
                                 onClick={() => toggleAsistencia(participante.id)}
@@ -748,9 +862,9 @@ const AttendanceView = ({ onBack }) => {
                                   <div className="text-xs text-gray-500">
                                     {participante.sexo}{participante.ciudad ? ` · ${participante.ciudad}` : ''}
                                   </div>
-                                  {participante.condiciones_salud && participante.condiciones_salud !== 'Ninguna' && (
+                                  {tieneCondicion(participante) && (
                                     <div
-                                      className="text-xs text-red-300 truncate"
+                                      className="text-xs text-red-300 truncate max-w-[260px]"
                                       title={participante.condiciones_salud}
                                     >
                                       Salud: {participante.condiciones_salud}
@@ -767,10 +881,46 @@ const AttendanceView = ({ onBack }) => {
                             <td className="px-6 py-3.5 border-b border-white/[0.06] text-gray-300 text-sm">
                               {participante.sector_profesional}
                             </td>
-                            <td className="px-6 py-3.5 border-b border-white/[0.06] font-mono text-sm text-gray-400">
-                              {participante.telefono}
+                            <td className="px-6 py-3.5 border-b border-white/[0.06] text-sm">
+                              <div className="font-mono text-gray-300">{participante.telefono}</div>
+                              {participante.telefono_emergencia && (
+                                <div className="text-xs text-gray-500">
+                                  Emerg.: <span className="font-mono">{participante.telefono_emergencia}</span>
+                                </div>
+                              )}
+                              {participante.correo && (
+                                <div className="text-xs text-gray-500 truncate max-w-[220px]" title={participante.correo}>
+                                  {participante.correo}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-3.5 border-b border-white/[0.06]">
+                              <div className="flex items-center justify-end gap-2">
+                                <PdfButton
+                                  participante={participante}
+                                  downloadingId={downloadingId}
+                                  onDownload={handleDownloadPdf}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpanded(participante.id)}
+                                  aria-expanded={isExpanded}
+                                  className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-colors"
+                                >
+                                  {isExpanded ? 'Ocultar' : 'Ver todo'}
+                                  <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
+                          {isExpanded && (
+                            <tr className="bg-white/[0.03]">
+                              <td colSpan="6" className="px-6 pb-5 pt-1 border-b border-white/[0.06]">
+                                <ParticipantDetails participante={participante} />
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
                         );
                       })
                     )}
@@ -800,6 +950,7 @@ const AttendanceView = ({ onBack }) => {
                 ) : (
                   filteredParticipantes.map((participante) => {
                     const palette = avatarPalette(participante.sexo);
+                    const isExpanded = expandedId === participante.id;
                     return (
                       <div key={participante.id} className="p-3 sm:p-4">
                         <div className="flex items-start gap-3">
@@ -822,25 +973,47 @@ const AttendanceView = ({ onBack }) => {
                               {participante.sector_profesional} · {participante.telefono}
                               {participante.ciudad ? ` · ${participante.ciudad}` : ''}
                             </p>
-                            {participante.condiciones_salud && participante.condiciones_salud !== 'Ninguna' && (
+                            {tieneCondicion(participante) && (
                               <p className="text-xs text-red-300 truncate mb-2" title={participante.condiciones_salud}>
                                 Salud: {participante.condiciones_salud}
                               </p>
                             )}
 
-                            <button
-                              onClick={() => toggleAsistencia(participante.id)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                                participante.asistio
-                                  ? 'bg-[#3DDC97]/15 text-[#3DDC97] border-[#3DDC97]/30'
-                                  : 'bg-white/[0.04] text-gray-400 border-white/10'
-                              }`}
-                            >
-                              {participante.asistio ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                              {participante.asistio ? 'Asistió' : 'Pendiente'}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() => toggleAsistencia(participante.id)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                  participante.asistio
+                                    ? 'bg-[#3DDC97]/15 text-[#3DDC97] border-[#3DDC97]/30'
+                                    : 'bg-white/[0.04] text-gray-400 border-white/10'
+                                }`}
+                              >
+                                {participante.asistio ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                                {participante.asistio ? 'Asistió' : 'Pendiente'}
+                              </button>
+                              <PdfButton
+                                participante={participante}
+                                downloadingId={downloadingId}
+                                onDownload={handleDownloadPdf}
+                                compact
+                              />
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(participante.id)}
+                                aria-expanded={isExpanded}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-colors"
+                              >
+                                {isExpanded ? 'Ocultar' : 'Ver todo'}
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                        {isExpanded && (
+                          <div className="mt-3">
+                            <ParticipantDetails participante={participante} />
+                          </div>
+                        )}
                       </div>
                     );
                   })
