@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 import tempfile
 from io import BytesIO
 import pathlib
@@ -197,8 +197,14 @@ def fuente_ajustada(draw, texto: str, font_path: str, tamano_max: int, ancho_max
         return ImageFont.load_default()
 
 
-def generar_numero_participante(participante_id: int, nombre: str):
-    """Genera la imagen con el número y nombre del participante"""
+def es_medico(sector_profesional: Optional[str]) -> bool:
+    """Médico, especialista, interno, en servicio social o residente (no estudiantes ni paramédicos)"""
+    return (sector_profesional or "").strip().startswith("Médico")
+
+
+def generar_numero_participante(participante_id: int, nombre: str, contorno: bool = False):
+    """Genera la imagen con el número y nombre del participante.
+    Si contorno=True (médicos), el número se dibuja solo con el contorno, sin relleno."""
     try:
         # Si existe imagen base personalizada, usarla; si no, crear una imagen básica
         if os.path.exists(BASE_IMG_PATH):
@@ -221,7 +227,39 @@ def generar_numero_participante(participante_id: int, nombre: str):
                 break
             font_numero = ImageFont.truetype(FONT_BOLD_PATH, font_numero.size - 10)
         font_nombre = fuente_ajustada(draw, nombre.upper(), FONT_BOLD_PATH, 90, NOMBRE_MAX_WIDTH)
-        draw.text(NUMERO_POS, numero_formateado, font=font_numero, fill='#0b1f4d', anchor='mm')
+        if contorno:
+            # Contorno: se dibuja el número con trazo azul marino y luego se "vacía" el interior
+            # recortando el relleno del trazo sobre la plantilla original.
+            # El trazo crece hacia afuera, así que se reduce la fuente y se separan los dígitos
+            # para que el número siga cabiendo en el panel y los bordes no se encimen.
+            def medidas(font):
+                grosor = max(8, font.size // 18)
+                espacio = grosor * 2
+                anchos = [draw.textlength(c, font=font) for c in numero_formateado]
+                ancho = sum(anchos) + espacio * (len(anchos) - 1) + grosor * 2
+                top, bottom = draw.textbbox((0, 0), numero_formateado, font=font, anchor='mm', stroke_width=grosor)[1::2]
+                return grosor, espacio, anchos, ancho, bottom - top
+
+            grosor, espacio, anchos, ancho, alto = medidas(font_numero)
+            while font_numero.size > 20 and (ancho > NUMERO_MAX_WIDTH or alto > NUMERO_MAX_HEIGHT):
+                font_numero = ImageFont.truetype(FONT_BOLD_PATH, font_numero.size - 10)
+                grosor, espacio, anchos, ancho, alto = medidas(font_numero)
+
+            mascara_trazo = Image.new('L', img.size, 0)
+            mascara_relleno = Image.new('L', img.size, 0)
+            dibujo_trazo = ImageDraw.Draw(mascara_trazo)
+            dibujo_relleno = ImageDraw.Draw(mascara_relleno)
+            x = NUMERO_POS[0] - (ancho - grosor * 2) / 2
+            for caracter, ancho_caracter in zip(numero_formateado, anchos):
+                pos = (x, NUMERO_POS[1])
+                dibujo_trazo.text(pos, caracter, font=font_numero, fill=255, anchor='lm',
+                                  stroke_width=grosor, stroke_fill=255)
+                dibujo_relleno.text(pos, caracter, font=font_numero, fill=255, anchor='lm')
+                x += ancho_caracter + espacio
+            solo_borde = ImageChops.subtract(mascara_trazo, mascara_relleno)
+            img.paste('#0b1f4d', mask=solo_borde)
+        else:
+            draw.text(NUMERO_POS, numero_formateado, font=font_numero, fill='#0b1f4d', anchor='mm')
         draw.text(NOMBRE_POS, nombre.upper(), font=font_nombre, fill='white', anchor='mm')
 
         # Guardar imagen en memoria
@@ -394,13 +432,13 @@ async def descargar_imagen(numero_participante: str, request: Request):
     cursor = con.cursor()
 
     try:
-        cursor.execute("SELECT nombre FROM participantes WHERE numero_asignado = ?", (numero_participante,))
+        cursor.execute("SELECT nombre, sector_profesional FROM participantes WHERE numero_asignado = ?", (numero_participante,))
         participante = cursor.fetchone()
 
         if not participante:
             raise HTTPException(status_code=404, detail="Participante no encontrado")
 
-        nombre_real = participante[0]
+        nombre_real, sector_profesional = participante
 
     except HTTPException:
         raise
@@ -409,7 +447,7 @@ async def descargar_imagen(numero_participante: str, request: Request):
     finally:
         con.close()
 
-    img_bytes = generar_numero_participante(participant_id, nombre_real)
+    img_bytes = generar_numero_participante(participant_id, nombre_real, es_medico(sector_profesional))
 
     if not img_bytes:
         raise HTTPException(status_code=500, detail="No se pudo generar la imagen")
