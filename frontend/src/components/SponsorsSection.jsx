@@ -98,9 +98,9 @@ const SponsorsSection = () => {
             {sponsorsLoop.map((sponsor, index) => (
               <div
                 key={`${sponsor.name}-${index}`}
-                className="flex flex-col items-center justify-center text-center flex-shrink-0 w-24 sm:w-28 md:w-32 transition-transform duration-300 hover:scale-105"
+                className="flex flex-col items-center justify-center text-center flex-shrink-0 w-28 sm:w-32 md:w-36 transition-transform duration-300 hover:scale-105"
               >
-                <div className="w-25 h-25 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden border border-blue-700 bg-blue-800 shadow-inner mb-2">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border border-blue-700 bg-blue-800 shadow-inner mb-2">
                   <img
                     src={sponsor.image || '/images/patrocinadores/logo-provisional.svg'}
                     alt={sponsor.name || 'Patrocinador'}
@@ -289,7 +289,7 @@ const SponsorsSection = () => {
           to { transform: translateX(-50%); }
         }
         .sponsors-track {
-          animation: scroll-sponsors 90s linear infinite;
+          animation: scroll-sponsors 100s linear infinite;
         }
         .group\\/carousel:hover .sponsors-track {
           animation-play-state: paused;
