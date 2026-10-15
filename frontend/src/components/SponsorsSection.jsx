@@ -289,7 +289,7 @@ const SponsorsSection = () => {
           to { transform: translateX(-50%); }
         }
         .sponsors-track {
-          animation: scroll-sponsors 50s linear infinite;
+          animation: scroll-sponsors 90s linear infinite;
         }
         .group\\/carousel:hover .sponsors-track {
           animation-play-state: paused;
