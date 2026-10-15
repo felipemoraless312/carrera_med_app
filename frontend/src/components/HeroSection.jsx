@@ -69,6 +69,13 @@ const CONGRESOS = [
     link: 'https://docs.google.com/forms/d/e/1FAIpQLSd9GLTrAKIqEvYhEkUtmMneY8y3ovl46pQH9nDuYnexSnWnUQ/viewform?usp=dialog',
     buttonText: 'Inscríbete a la Reunión',
   },
+  {
+    src: '/images/congresos/jornadas.jpeg',
+    alt: 'Jornadas Académicas FEACOMECH & Simposio de Dermatología 2026',
+    label: 'Jornadas Académicas FEACOMECH & Simposio de Dermatología',
+    link: '/images/congresos/jornadas.jpeg',
+    buttonText: 'Ver información completa',
+  },
 ];
 
 // Estilo base compartido por las tarjetas del hero
@@ -383,7 +390,7 @@ const HeroSection = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5 md:gap-6 max-w-2xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 max-w-2xl lg:max-w-5xl mx-auto">
             {CONGRESOS.map((item) => (
               <div
                 key={item.src}
