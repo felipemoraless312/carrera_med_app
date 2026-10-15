@@ -427,7 +427,8 @@ export const downloadUtils = {
   },
 
   // Descargar PDF tamaño carta listo para imprimir: número en la mitad superior, la otra mitad en blanco
-  async downloadParticipantPdf(numeroParticipante, nombreParticipante) {
+  // datos: { sexo, telefono, sector_profesional, ciudad, telefono_emergencia, condiciones_salud }
+  async downloadParticipantPdf(numeroParticipante, nombreParticipante, datos = {}) {
     try {
       const blob = await apiService.descargarImagen(numeroParticipante, nombreParticipante);
       const dataUrl = await new Promise((resolve, reject) => {
@@ -466,10 +467,46 @@ export const downloadUtils = {
       const imgH = height * scale;
       pdf.addImage(jpegDataUrl, 'JPEG',(pageW - imgW) / 2, (halfH - imgH) / 2, imgW, imgH);
 
-      // Línea punteada de corte entre las dos mitades
-      pdf.setDrawColor(160);
-      pdf.setLineDashPattern([2, 2], 0);
-      pdf.line(0, halfH, pageW, halfH);
+      // Mitad inferior: datos de registro para que la hoja sirva como identificador
+      const margin = 20;
+      let y = halfH + 14;
+      pdf.setTextColor(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(15);
+      pdf.text('DATOS DE REGISTRO', pageW / 2, y, { align: 'center' });
+      pdf.setDrawColor(30, 58, 138);
+      pdf.setLineWidth(0.6);
+      pdf.line(margin, y + 3, pageW - margin, y + 3);
+      y += 13;
+
+      const campos = [
+        ['Número', String(numeroParticipante)],
+        ['Nombre', nombreParticipante],
+        ['Sexo', datos.sexo],
+        ['Sector', datos.sector_profesional],
+        ['Ciudad', datos.ciudad],
+        ['Teléfono', datos.telefono],
+        ['Tel. de emergencia', datos.telefono_emergencia],
+        ['Condiciones de salud', datos.condiciones_salud]
+      ].filter(([, valor]) => valor && String(valor).trim());
+
+      pdf.setFontSize(12);
+      for (const [etiqueta, valor] of campos) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${etiqueta}:`, margin, y);
+        pdf.setFont('helvetica', 'normal');
+        const lineas = pdf.splitTextToSize(String(valor).trim(), pageW - margin - 70);
+        pdf.text(lineas.slice(0, 2), margin + 50, y);
+        y += 8 * Math.min(lineas.length, 2);
+      }
+
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(10);
+      pdf.setTextColor(90);
+      pdf.text(
+        'Porte esta hoja al frente de su playera el día de la carrera, sujeta con broches en las cuatro esquinas.',
+        pageW / 2, 279.4 - 12, { align: 'center', maxWidth: pageW - 2 * margin }
+      );
 
       const filename = `numero_${numeroParticipante}_${nombreParticipante.replace(/\s+/g, '_')}.pdf`;
       this.downloadBlob(pdf.output('blob'), filename);

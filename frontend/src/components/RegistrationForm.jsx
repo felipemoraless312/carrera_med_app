@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Phone, User, Briefcase, MapPin, PhoneCall, Mail, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift } from 'lucide-react';
+import { Users, Phone, User, Briefcase, MapPin, PhoneCall, Mail, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift, Printer } from 'lucide-react';
 import { apiService, downloadUtils } from '../services/api';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
@@ -88,6 +88,11 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         numero: data.numero_asignado,
         nombre: formData.nombre.trim(),
         telefono: formData.telefono.trim(),
+        sexo: formData.sexo,
+        sector_profesional: formData.sector_profesional,
+        ciudad: formData.ciudad.trim(),
+        telefono_emergencia: formData.telefono_emergencia.trim(),
+        condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud.trim() : 'Ninguna',
         imagen_url: data.imagen_url
       });
 
@@ -129,7 +134,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
 
     setIsGeneratingPdf(true);
     try {
-      await downloadUtils.downloadParticipantPdf(participantData.numero, participantData.nombre);
+      await downloadUtils.downloadParticipantPdf(participantData.numero, participantData.nombre, participantData);
     } catch (error) {
       console.error('Error al descargar PDF:', error);
       setRegistrationResult({
@@ -166,7 +171,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
             </h2>
             <p className="text-gray-300">
               {isSuccess
-                ? 'Recoja su número de participante en el consultorio del Dr. Francisco Ramos Narváez'
+                ? 'Descargue e imprima su número: será su identificador el día de la carrera'
                 : 'Complete el formulario para obtener su número de participante'}
             </p>
           </div>
@@ -238,35 +243,22 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                     {isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF para imprimir'}
                   </button>
 
-                  {/* Entrega del número en el consultorio del Dr. Ramos Narváez */}
+                  {/* El PDF impreso es el identificador del corredor */}
                   <div
                     role="note"
                     className="mt-4 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3"
                   >
-                    <MapPin className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
+                    <Printer className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
                     <div className="text-sm">
                       <p className="font-black text-green-200 leading-tight">
-                        Recoja su número en el consultorio del Dr. Francisco Ramos Narváez
+                        Imprima su PDF: es su identificador el día de la carrera
                       </p>
                       <p className="mt-1 text-gray-300 leading-snug">
-                        Su número de participante se entregará en el consultorio del{' '}
-                        <span className="font-bold text-gray-100">Dr. Francisco Ramos Narváez</span>. Preséntese con su nombre o número de participante.
-                      </p>
-                      <p className="mt-2 text-gray-300 leading-snug">
-                        <a
-                          href="https://maps.app.goo.gl/DGZKGP9dpCddKzTa9"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-green-200"
-                        >
-                          2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez
-                        </a>
-                        {' '}· Tel.{' '}
-                        <a href="tel:9616136666" className="underline hover:text-green-200">(961) 61 3 66 66</a>
+                        El PDF contiene su número, su nombre y sus datos de registro. Imprímalo en hoja tamaño carta y llévelo puesto el día de la carrera.
                       </p>
                       <ul className="mt-2 text-gray-300 space-y-1 leading-snug">
-                        <li>• Llévelo al frente de su playera, visible y sin doblar, el día de la carrera.</li>
-                        <li>• Sujételo con seguros (alfileres de seguridad) en las cuatro esquinas.</li>
+                        <li>• Llévelo al frente de su playera, visible y sin doblar.</li>
+                        <li>• Sujételo con broches (seguros) en las cuatro esquinas.</li>
                       </ul>
                     </div>
                   </div>
@@ -462,7 +454,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                   <li>• Use sus datos personales reales: su nombre y número de celular son necesarios para reclamar premios en la tómbola, que se realizará de manera digital</li>
                   <li>• Solo se permite un registro por número de teléfono</li>
                   <li>• Conserve su número de participante y el teléfono con el que se registró para el día de la carrera</li>
-                  <li>• Los números se entregarán en el consultorio del Dr. Francisco Ramos Narváez (2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez · Tel. (961) 61 3 66 66)</li>
+                  <li>• Al registrarse podrá descargar su número en PDF: imprímalo y pórtelo con broches el día de la carrera como identificador</li>
                 </ul>
               </div>
 

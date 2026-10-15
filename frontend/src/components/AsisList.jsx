@@ -243,12 +243,12 @@ const AttendanceView = ({ onBack }) => {
     }
   };
 
-  // Mismo PDF que recibe el corredor al registrarse (hoja carta, número en la mitad superior)
+  // Mismo PDF que recibe el corredor al registrarse (número arriba, datos de registro abajo)
   const handleDownloadPdf = async (participante) => {
     setPdfError(null);
     setDownloadingId(participante.id);
     try {
-      await downloadUtils.downloadParticipantPdf(participante.numero_asignado, participante.nombre);
+      await downloadUtils.downloadParticipantPdf(participante.numero_asignado, participante.nombre, participante);
     } catch {
       setPdfError(`No se pudo generar el PDF de ${participante.nombre}. Intente nuevamente.`);
     } finally {

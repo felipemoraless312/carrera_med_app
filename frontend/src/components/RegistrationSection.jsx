@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Gift, MapPin } from 'lucide-react';
+import { Heart, Gift, Printer } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
 import { apiService } from '../services/api';
 
@@ -120,32 +120,19 @@ const RegistrationSection = ({ setActiveSection }) => {
               </div>
             </div>
 
-            {/* Aviso de entrega de números en el consultorio del Dr. Ramos Narváez */}
+            {/* Aviso: el PDF impreso es el identificador del corredor */}
             <div
               role="note"
               className="mt-3 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3 md:p-4"
             >
-              <MapPin className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
+              <Printer className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
               <div>
                 <p className="text-sm md:text-base font-black text-green-200 leading-tight">
-                  Entrega de números en el consultorio del Dr. Francisco Ramos Narváez
+                  Tu número en PDF para imprimir
                 </p>
                 <p className="mt-1 text-xs md:text-sm text-gray-300 leading-snug">
-                  Los números de participante se entregarán en el consultorio del{' '}
-                  <span className="font-bold text-gray-100">Dr. Francisco Ramos Narváez</span>. Al registrarte obtienes tu número;
-                  preséntate con tu nombre o número de participante para recogerlo.
-                </p>
-                <p className="mt-2 text-xs md:text-sm text-gray-300 leading-snug">
-                  <a
-                    href="https://maps.app.goo.gl/DGZKGP9dpCddKzTa9"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-green-200"
-                  >
-                    2a. Avenida Sur Poniente #557, col. Centro, Tuxtla Gutiérrez
-                  </a>
-                  {' '}· Tel.{' '}
-                  <a href="tel:9616136666" className="underline hover:text-green-200">(961) 61 3 66 66</a>
+                  Al registrarte podrás descargar un PDF con tu número, tu nombre y tus datos de registro.
+                  Imprímelo y pórtalo al frente de tu playera con broches el día de la carrera: será tu identificador.
                 </p>
               </div>
             </div>
