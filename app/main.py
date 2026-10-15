@@ -197,9 +197,12 @@ def fuente_ajustada(draw, texto: str, font_path: str, tamano_max: int, ancho_max
         return ImageFont.load_default()
 
 
+SECTORES_CONTORNO = {"Médico", "Médico especialista", "Estudiante de medicina"}
+
+
 def es_medico(sector_profesional: Optional[str]) -> bool:
-    """Médico, especialista, interno, en servicio social o residente (no estudiantes ni paramédicos)"""
-    return (sector_profesional or "").strip().startswith("Médico")
+    """Sectores cuyo número se dibuja solo con contorno"""
+    return (sector_profesional or "").strip() in SECTORES_CONTORNO
 
 
 def generar_numero_participante(participante_id: int, nombre: str, contorno: bool = False):
