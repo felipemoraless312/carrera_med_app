@@ -92,6 +92,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         sector_profesional: formData.sector_profesional,
         ciudad: formData.ciudad.trim(),
         telefono_emergencia: formData.telefono_emergencia.trim(),
+        correo: formData.correo.trim(),
         condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud.trim() : 'Ninguna',
         imagen_url: data.imagen_url
       });
