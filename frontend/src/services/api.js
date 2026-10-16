@@ -474,6 +474,26 @@ export const downloadUtils = {
       pdf.line(0, halfH, pageW, halfH);
       pdf.setLineDashPattern([], 0);
 
+      // Tijeras sobre la línea (dibujadas, la fuente del PDF no trae el símbolo ✂)
+      const tx = 14;
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(tx - 2, halfH - 3, 11, 6, 'F');
+      pdf.setDrawColor(110);
+      pdf.setLineWidth(0.35);
+      pdf.circle(tx, halfH - 1.7, 1.3, 'S');
+      pdf.circle(tx, halfH + 1.7, 1.3, 'S');
+      pdf.line(tx + 1.1, halfH - 1.0, tx + 7.5, halfH + 1.2);
+      pdf.line(tx + 1.1, halfH + 1.0, tx + 7.5, halfH - 1.2);
+
+      // Leyenda centrada sobre la línea
+      const leyenda = 'RECORTE AQUÍ';
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      const leyendaW = pdf.getTextWidth(leyenda) + 6;
+      pdf.rect((pageW - leyendaW) / 2, halfH - 2.8, leyendaW, 5.6, 'F');
+      pdf.setTextColor(110);
+      pdf.text(leyenda, pageW / 2, halfH + 1.1, { align: 'center' });
+
       // Mitad inferior: datos de registro para que la hoja sirva como identificador
       const margin = 20;
       let y = halfH + 14;
