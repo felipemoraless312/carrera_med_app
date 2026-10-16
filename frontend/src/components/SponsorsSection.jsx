@@ -32,6 +32,14 @@ const SponsorsSection = () => {
     { name: 'EMA Escuela de Medicina Alternativa', image: '/images/nuevos_patrocinadores/ema.jpeg' },
     { name: 'Afrodita Productos Regionales', image: '/images/nuevos_patrocinadores/afrodita.jpeg' },
     { name: 'Clinica Larrosa', image: '/images/patrocinadores/larosa.png' },
+    { name: 'BYD', image: '/images/patrocinadores/byd.png' },
+    { name: 'Hospital Xamaipak', image: '/images/patrocinadores/xamaipak.avif' },
+    { name: 'Solcan', image: '/images/patrocinadores/solcan.png' },
+    { name: 'VIPS', image: '/images/patrocinadores/vips.png' },
+    { name: 'Diario de Chiapas', image: '/images/patrocinadores/diario-de-chiapas.png' },
+    { name: 'PiSA', image: '/images/patrocinadores/pisa.jpg' },
+    { name: 'iCard', image: '/images/patrocinadores/icard.jpg' },
+    { name: 'Salud Digna', image: '/images/patrocinadores/salud-digna.jpg' },
     { name: '', image: '/images/nuevos_patrocinadores/sin-nombre.jpeg' }
   ];
 
