@@ -15,9 +15,6 @@ from io import BytesIO
 import pathlib
 import secrets
 
-# Configuración
-MAX_REGISTROS = 2000
-
 # PIN de la rifa: se define con la variable de entorno RIFA_PIN
 RIFA_PIN = os.getenv("RIFA_PIN", "")
 ESTADOS_GANADOR = {"pendiente", "entregado", "anulado"}
@@ -65,7 +62,7 @@ async def startup_event():
 
     # Verificar estado actual
     puede_registrar, total = verificar_limite_registros()
-    print(f"📊 Registros actuales: {total}/{MAX_REGISTROS}")
+    print(f"📊 Registros actuales: {total} (sin límite)")
     print(f"🟢 Puede registrar: {'Sí' if puede_registrar else 'No'}")
 
 # CORS
@@ -171,14 +168,14 @@ def crear_tablas():
         con.close()
 
 def verificar_limite_registros():
-    """Verifica si aún se pueden hacer registros"""
+    """Devuelve (puede_registrar, total). Los registros son ilimitados."""
     con = conectar_bd()
     cursor = con.cursor()
 
     try:
         cursor.execute("SELECT COUNT(*) FROM participantes")
         total = cursor.fetchone()[0]
-        return total < MAX_REGISTROS, total
+        return True, total
     except Exception as e:
         return False, 0
     finally:
@@ -300,7 +297,7 @@ async def get_status():
     puede_registrar, total_actual = verificar_limite_registros()
     return {
         "total_registros": total_actual,
-        "limite_maximo": MAX_REGISTROS,
+        "limite_maximo": None,
         "puede_registrar": puede_registrar
     }
 
@@ -350,11 +347,6 @@ async def registrar_participante(participante: ParticipanteCreate):
 
     condiciones_salud = participante.condiciones_salud.strip() or "Ninguna"
 
-    # Verificar límite de registros
-    puede_registrar, total_actual = verificar_limite_registros()
-    if not puede_registrar:
-        raise HTTPException(status_code=400, detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
-
     con = conectar_bd()
     cursor = con.cursor()
 
@@ -372,10 +364,6 @@ async def registrar_participante(participante: ParticipanteCreate):
         cursor.execute("SELECT MAX(id) FROM participantes")
         max_id = cursor.fetchone()[0]
         next_id = 1 if max_id is None else max_id + 1
-
-        if next_id > MAX_REGISTROS:
-            raise HTTPException(status_code=400,
-                              detail=f"Se ha alcanzado el límite máximo de {MAX_REGISTROS} registros.")
 
         # Crear número formateado
         numero_asignado = f"{next_id:04d}"
@@ -426,7 +414,7 @@ async def descargar_imagen(numero_participante: str, request: Request):
 
     try:
         participant_id = int(numero_participante)
-        if participant_id <= 0 or participant_id > MAX_REGISTROS:
+        if participant_id <= 0:
             raise HTTPException(status_code=400, detail="Número de participante inválido")
     except ValueError:
         raise HTTPException(status_code=400, detail="Número de participante debe ser numérico")
