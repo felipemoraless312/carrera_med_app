@@ -1,7 +1,28 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { Heart, Users } from 'lucide-react';
 
+const SPONSORS_DURATION_S = 100;
+
 const SponsorsSection = () => {
+  const carouselRef = useRef(null);
+  const trackRef = useRef(null);
+  const firstSponsorRef = useRef(null);
+
+  // Adelanta la animación para que el carrusel arranque con el primer patrocinador
+  // (Universidad Politécnica) centrado en pantalla
+  useLayoutEffect(() => {
+    const carousel = carouselRef.current;
+    const track = trackRef.current;
+    const first = firstSponsorRef.current;
+    if (!carousel || !track || !first) return;
+
+    const periodo = track.offsetWidth / 2;
+    if (!periodo) return;
+    const desplazamiento = first.offsetLeft + first.offsetWidth / 2 - carousel.offsetWidth / 2;
+    const fraccion = (((desplazamiento / periodo) % 1) + 1) % 1;
+    track.style.animationDelay = `-${fraccion * SPONSORS_DURATION_S}s`;
+  }, []);
+
   const sponsors = [
     { name: 'Universidad Politécnica de Chiapas', image: '/images/patrocinadores/universidad-politecnica.webp' },
     { name: 'HD (Hematology Diagnostic)', image: '/images/patrocinadores/HD.jpg' },
@@ -97,15 +118,16 @@ const SponsorsSection = () => {
         </div>
 
         {/* Carrusel de patrocinadores */}
-        <div className="relative mb-16 overflow-hidden group/carousel">
+        <div ref={carouselRef} className="relative mb-16 overflow-hidden group/carousel">
           {/* Degradados en los bordes para suavizar la entrada/salida */}
           <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-r from-blue-950 to-transparent z-10" />
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 md:w-24 bg-gradient-to-l from-blue-950 to-transparent z-10" />
 
-          <div className="sponsors-track flex w-max gap-6 md:gap-8">
+          <div ref={trackRef} className="sponsors-track flex w-max gap-6 md:gap-8">
             {sponsorsLoop.map((sponsor, index) => (
               <div
                 key={`${sponsor.name}-${index}`}
+                ref={index === 0 ? firstSponsorRef : undefined}
                 className="flex flex-col items-center justify-center text-center flex-shrink-0 w-28 sm:w-32 md:w-36 transition-transform duration-300 hover:scale-105"
               >
                 <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border border-blue-700 bg-blue-800 shadow-inner mb-2">
@@ -297,7 +319,7 @@ const SponsorsSection = () => {
           to { transform: translateX(-50%); }
         }
         .sponsors-track {
-          animation: scroll-sponsors 100s linear infinite;
+          animation: scroll-sponsors ${SPONSORS_DURATION_S}s linear infinite;
         }
         .group\\/carousel:hover .sponsors-track {
           animation-play-state: paused;
