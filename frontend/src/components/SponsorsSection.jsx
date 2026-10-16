@@ -26,42 +26,42 @@ const SponsorsSection = () => {
   const sponsors = [
     { name: 'Universidad Politécnica de Chiapas', image: '/images/patrocinadores/universidad-politecnica.webp' },
     { name: 'HD (Hematology Diagnostic)', image: '/images/patrocinadores/HD.jpg' },
-    { name: 'HOSCEM: Hospital y centro Médico San Cristobal de las Casas', image: '/images/patrocinadores/hoscem.png' },
-    { name: 'Instituto del Deporte de Chiapas', image: '/images/nuevos_patrocinadores/instituto-del-deporte.jpeg' },
-    { name: 'Ayuntamiento de Tuxtla Gutiérrez', image: '/images/nuevos_patrocinadores/tuxtla-gutierrez.jpeg' },
+    { name: 'HOSCEM: Hospital y centro Médico San Cristobal de las Casas', image: '/images/patrocinadores_circulo/hoscem.webp', circular: true },
+    { name: 'Instituto del Deporte de Chiapas', image: '/images/patrocinadores_circulo/instituto-del-deporte.webp', circular: true },
+    { name: 'Ayuntamiento de Tuxtla Gutiérrez', image: '/images/patrocinadores_circulo/tuxtla-gutierrez.webp', circular: true },
     { name: 'Dr. Francisco Ramos Narváez', image: '/images/nuevos_patrocinadores/dr-ramos-narvaez.jpeg' },
-    { name: 'One More International México', image: '/images/nuevos_patrocinadores/one-more-international.jpeg' },
-    { name: 'El Precio de la Historia', image: '/images/nuevos_patrocinadores/el-precio-de-la-historia.jpeg' },
+    { name: 'One More International México', image: '/images/patrocinadores_circulo/one-more-international.webp', circular: true },
+    { name: 'El Precio de la Historia', image: '/images/patrocinadores_circulo/el-precio-de-la-historia.webp', circular: true },
     { name: 'La Escuelita', image: '/images/nuevos_patrocinadores/la-escuelita.jpeg' },
     { name: 'VIM Active Wear', image: '/images/nuevos_patrocinadores/vim-active-wear.jpeg' },
     { name: 'Yves Rocher', image: '/images/nuevos_patrocinadores/yves-rocher.jpeg' },
-    { name: 'Conse-Frut Linaloe', image: '/images/nuevos_patrocinadores/linaloe.jpeg' },
+    { name: 'Conse-Frut Linaloe', image: '/images/patrocinadores_circulo/linaloe.webp', circular: true },
     { name: 'Farmasi', image: '/images/nuevos_patrocinadores/farmasi.jpeg' },
-    { name: 'Gosanvela Miel', image: '/images/nuevos_patrocinadores/gosanvela.jpeg' },
+    { name: 'Gosanvela Miel', image: '/images/patrocinadores_circulo/gosanvela.webp', circular: true },
     { name: 'Quererte Jewelry', image: '/images/nuevos_patrocinadores/quererte-jewelry.jpeg' },
     { name: 'Joymi', image: '/images/nuevos_patrocinadores/joymi.jpeg' },
     { name: "Grand Parent's Land", image: '/images/nuevos_patrocinadores/grand-parents-land.jpeg' },
     { name: 'Activa Mente', image: '/images/nuevos_patrocinadores/activa-mente.jpeg' },
-    { name: 'Casa Esthela', image: '/images/nuevos_patrocinadores/casa-esthela.jpeg' },
+    { name: 'Casa Esthela', image: '/images/patrocinadores_circulo/casa-esthela.webp', circular: true },
     { name: 'Toque de Gracia', image: '/images/nuevos_patrocinadores/toque-de-gracia.jpeg' },
     { name: 'Nice Esperanza Joyería', image: '/images/nuevos_patrocinadores/nice-esperanza.jpeg' },
-    { name: 'Jovimaga', image: '/images/nuevos_patrocinadores/jovimaga.jpeg' },
-    { name: 'Taquitos de la Comisión', image: '/images/nuevos_patrocinadores/la-comision.jpeg' },
-    { name: 'Natura & Avon', image: '/images/nuevos_patrocinadores/natura-avon.jpeg' },
-    { name: 'Plumín', image: '/images/nuevos_patrocinadores/plumin.jpeg' },
-    { name: 'Budelli', image: '/images/nuevos_patrocinadores/budelli.jpeg' },
+    { name: 'Jovimaga', image: '/images/patrocinadores_circulo/jovimaga.webp', circular: true },
+    { name: 'Taquitos de la Comisión', image: '/images/patrocinadores_circulo/la-comision.webp', circular: true },
+    { name: 'Natura & Avon', image: '/images/patrocinadores_circulo/natura-avon.webp', circular: true },
+    { name: 'Plumín', image: '/images/patrocinadores_circulo/plumin.webp', circular: true },
+    { name: 'Budelli', image: '/images/patrocinadores_circulo/budelli.webp', circular: true },
     { name: 'EMA Escuela de Medicina Alternativa', image: '/images/nuevos_patrocinadores/ema.jpeg' },
     { name: 'Afrodita Productos Regionales', image: '/images/nuevos_patrocinadores/afrodita.jpeg' },
-    { name: 'Clinica Larrosa', image: '/images/patrocinadores/larosa.png' },
+    { name: 'Clinica Larrosa', image: '/images/patrocinadores_circulo/larosa.webp', circular: true },
     { name: 'BYD', image: '/images/patrocinadores/byd.png' },
     { name: 'Hospital Xamaipak', image: '/images/patrocinadores/xamaipak.avif' },
-    { name: 'Solcan', image: '/images/patrocinadores/solcan.png' },
+    { name: 'Solcan', image: '/images/patrocinadores_circulo/solcan.webp', circular: true },
     { name: 'VIPS', image: '/images/patrocinadores/vips.png' },
     { name: 'Diario de Chiapas', image: '/images/patrocinadores/diario-de-chiapas.png' },
     { name: 'PiSA', image: '/images/patrocinadores/pisa.jpg' },
     { name: 'iCard', image: '/images/patrocinadores/icard.jpg' },
     { name: 'Salud Digna', image: '/images/patrocinadores/salud-digna.jpg' },
-    { name: '', image: '/images/nuevos_patrocinadores/sin-nombre.jpeg' }
+    { name: '', image: '/images/patrocinadores_circulo/sin-nombre.webp', circular: true }
   ];
 
   const organizingCommittee = [
@@ -134,7 +134,9 @@ const SponsorsSection = () => {
                   <img
                     src={sponsor.image || '/images/patrocinadores/logo-provisional.svg'}
                     alt={sponsor.name || 'Patrocinador'}
-                    className="w-full h-full object-contain bg-white p-1 transition-transform duration-300"
+                    className={`w-full h-full transition-transform duration-300 ${
+                      sponsor.circular ? 'object-cover' : 'object-contain bg-white p-1'
+                    }`}
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = getFallbackSvg(sponsor.name);
