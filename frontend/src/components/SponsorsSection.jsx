@@ -62,6 +62,7 @@ const SponsorsSection = () => {
     { name: 'iCard', image: '/images/patrocinadores/icard.jpg' },
     { name: 'Salud Digna', image: '/images/patrocinadores/salud-digna.jpg' },
     { name: 'VP Hospital', image: '/images/patrocinadores_circulo/vp-hospital.webp', circular: true },
+    { name: 'Hospital Rojas', image: '/images/patrocinadores_circulo/hospital-rojas.webp', circular: true },
     { name: "Nature's Sunshine Products", image: '/images/patrocinadores_circulo/natures-sunshine.webp', circular: true }
   ];
 
