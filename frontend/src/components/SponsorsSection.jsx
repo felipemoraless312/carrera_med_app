@@ -74,7 +74,14 @@ const SponsorsSection = () => {
     { name: 'Dr. Humberto Rojas', position: 'Especialista', image: '/images/humberto_rojas.jpg' },
     { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/hernan_leon.jpg' },
     { name: 'Dr. Alejandro Bermúdez Montoya', position: 'Especialista', image: '/images/alejandro.png' },
-    { name: 'Dr. Eric Torres Reyes', position: 'Especialista', image: '/images/eric.png' }
+    { name: 'Dr. Eric Torres Reyes', position: 'Especialista', image: '/images/eric.png' },
+    { name: 'Lic. Carolina Toledo Coutiño' },
+    { name: 'Dr. Fernando Tapia Garduño' },
+    { name: 'Dr. Humberto Cunjama Sánchez' },
+    { name: 'Sr. Roberto Maza Suárez' },
+    { name: 'Dr. Víctor Clemente Ovalle' },
+    { name: 'Lic. Manuel Narcia' },
+    { name: 'Lic. María Luisa Cano Maldonado' }
   ];
 
   const committeePhotos = ['comite3.jpg', 'comite.jpg', 'comite2.jpg'];
@@ -208,6 +215,7 @@ const SponsorsSection = () => {
                   className="bg-blue-900 rounded-lg shadow-lg p-5 text-center hover:shadow-xl transition-all duration-300 border border-blue-900/40 group flex-shrink-0 w-[200px]"
                 >
                   <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 border-4 border-blue-800 relative group-hover:border-blue-600 transition-colors duration-300">
+                    {member.image ? (
                     <img
                       src={member.image}
                       alt={member.name}
@@ -216,17 +224,24 @@ const SponsorsSection = () => {
                         e.target.style.display = 'none';
                         e.target.parentNode.classList.add('flex', 'items-center', 'justify-center', 'bg-blue-800');
                         const fallbackIcon = document.createElement('div');
-                        fallbackIcon.innerHTML = '<svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>';
+                        fallbackIcon.innerHTML = '<svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>';
                         e.target.parentNode.appendChild(fallbackIcon);
                       }}
                     />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-blue-800">
+                        <Users className="w-10 h-10 text-blue-400" />
+                      </div>
+                    )}
                   </div>
                   <h4 className="text-base font-bold text-gray-100 mb-1 group-hover:text-blue-300 transition-colors duration-300">
                     {member.name}
                   </h4>
-                  <p className="text-xs text-blue-300 font-medium group-hover:text-blue-200 transition-colors duration-300">
-                    {member.position}
-                  </p>
+                  {member.position && (
+                    <p className="text-xs text-blue-300 font-medium group-hover:text-blue-200 transition-colors duration-300">
+                      {member.position}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -259,7 +274,7 @@ const SponsorsSection = () => {
                             e.target.style.display = 'none';
                             e.target.parentNode.classList.add('flex', 'items-center', 'justify-center', 'bg-blue-800');
                             const fallbackIcon = document.createElement('div');
-                            fallbackIcon.innerHTML = '<svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>';
+                            fallbackIcon.innerHTML = '<svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>';
                             e.target.parentNode.appendChild(fallbackIcon);
                           }}
                         />
@@ -334,7 +349,7 @@ const SponsorsSection = () => {
           to { transform: translateX(-50%); }
         }
         .committee-track {
-          animation: scroll-committee 35s linear infinite;
+          animation: scroll-committee 65s linear infinite;
         }
         .group\\/committee:hover .committee-track {
           animation-play-state: paused;
