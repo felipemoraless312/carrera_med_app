@@ -67,21 +67,19 @@ const SponsorsSection = () => {
   ];
 
   const organizingCommittee = [
-    { name: 'Dr. Francisco Antonio Ramos Narváez', position: 'Cirujano Gastroenterologo', image: '/images/Ramos.png' },
-    { name: 'Dr. Tadeo Santoyo Espinosa', position: 'Director de Ingeniería Biomédica', image: '/images/Tadeo.png' },
-    { name: 'Dr. Alexander Arroyo Nuñez', position: 'Especialista', image: '/images/alexander.png' },
-    { name: 'Dr. Juan Carlos Alvarez Ruiz', position: 'Especialista', image: '/images/juan_carlos.png' },
-    { name: 'Dr. Humberto Rojas', position: 'Especialista', image: '/images/humberto_rojas.jpg' },
-    { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/hernan_leon.jpg' },
-    { name: 'Dr. Alejandro Bermúdez Montoya', position: 'Especialista', image: '/images/alejandro.png' },
-    { name: 'Dr. Eric Torres Reyes', position: 'Especialista', image: '/images/eric.png' },
     { name: 'Lic. Carolina Toledo Coutiño' },
+    { name: 'Ing. Enrique Tadeo Santoya Espinoza', position: 'Director de Ingeniería Biomédica', image: '/images/Tadeo.png' },
     { name: 'Dr. Fernando Tapia Garduño' },
     { name: 'Dr. Humberto Cunjama Sánchez' },
     { name: 'Sr. Roberto Maza Suárez' },
+    { name: 'Ing. Alexander Arroyo Núñez', position: 'Especialista', image: '/images/alexander.png' },
+    { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/hernan_leon.jpg' },
     { name: 'Dr. Víctor Clemente Ovalle' },
+    { name: 'Dr. Humberto Hernández Rojas', position: 'Especialista', image: '/images/humberto_rojas.jpg' },
     { name: 'Lic. Manuel Narcia' },
-    { name: 'Lic. María Luisa Cano Maldonado' }
+    { name: 'Dr. Juan Carlos Álvarez', position: 'Especialista', image: '/images/juan_carlos.png' },
+    { name: 'Lic. María Luisa Cano Maldonado' },
+    { name: 'Dr. Francisco A. Ramos Narváez', position: 'Cirujano Gastroenterologo', image: '/images/Ramos.png' }
   ];
 
   const committeePhotos = ['comite3.jpg', 'comite.jpg', 'comite2.jpg'];
@@ -349,7 +347,7 @@ const SponsorsSection = () => {
           to { transform: translateX(-50%); }
         }
         .committee-track {
-          animation: scroll-committee 65s linear infinite;
+          animation: scroll-committee 60s linear infinite;
         }
         .group\\/committee:hover .committee-track {
           animation-play-state: paused;
