@@ -68,7 +68,7 @@ const SponsorsSection = () => {
 
   const organizingCommittee = [
     { name: 'Lic. Carolina Toledo Coutiño' },
-    { name: 'Ing. Enrique Tadeo Santoya Espinoza', position: 'Director de Ingeniería Biomédica', image: '/images/Tadeo.png' },
+    { name: 'Ing. Enrique Tadeo Santoyo Espinosa', position: 'Director de Ingeniería Biomédica', image: '/images/Tadeo.png' },
     { name: 'Dr. Fernando Tapia Garduño' },
     { name: 'Dr. Humberto Cunjama Sánchez' },
     { name: 'Sr. Roberto Maza Suárez' },
