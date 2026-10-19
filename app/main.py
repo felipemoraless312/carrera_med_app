@@ -15,6 +15,7 @@ from io import BytesIO
 import pathlib
 import secrets
 import time
+import unicodedata
 from urllib.parse import quote
 
 # PIN de la rifa: se define con la variable de entorno RIFA_PIN
@@ -104,8 +105,8 @@ class AsistenciaBulkUpdate(BaseModel):
     asistio: bool
 
 class RecuperarFolioRequest(BaseModel):
-    telefono: str = ""
-    correo: str = ""
+    tipo: str = ""
+    valor: str = ""
 
 # Funciones de base de datos
 def conectar_bd():
@@ -462,17 +463,25 @@ async def descargar_imagen(numero_participante: str, request: Request):
         }
     )
 
-# Límite de intentos para recuperar folio (por IP), para evitar que adivinen teléfonos
-RECUPERAR_MAX_INTENTOS = 10
+# Límite de intentos para recuperar folio (por IP), para evitar que descarguen la base completa
+RECUPERAR_MAX_INTENTOS = 20
 RECUPERAR_VENTANA_SEG = 15 * 60
+RECUPERAR_MAX_RESULTADOS = 20
 intentos_recuperar = {}
 
 def solo_digitos(texto: str) -> str:
     return re.sub(r"\D", "", texto or "")
 
+def normalizar_texto(texto: str) -> str:
+    """Minúsculas, sin acentos y sin espacios repetidos, para comparar nombres y correos"""
+    sin_acentos = unicodedata.normalize("NFD", texto or "")
+    sin_acentos = "".join(c for c in sin_acentos if unicodedata.category(c) != "Mn")
+    return " ".join(sin_acentos.lower().split())
+
 @app.post("/api/recuperar-folio")
 async def recuperar_folio(data: RecuperarFolioRequest, request: Request):
-    """Permite a un participante volver a descargar su número con su teléfono y correo"""
+    """Permite volver a descargar el número buscando por teléfono, correo o nombre.
+    Solo devuelve datos no sensibles, porque cualquiera puede hacer la búsqueda."""
     ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "desconocida")
     ahora = time.time()
     recientes = [t for t in intentos_recuperar.get(ip, []) if ahora - t < RECUPERAR_VENTANA_SEG]
@@ -481,49 +490,55 @@ async def recuperar_folio(data: RecuperarFolioRequest, request: Request):
     recientes.append(ahora)
     intentos_recuperar[ip] = recientes
 
-    telefono = solo_digitos(data.telefono)
-    correo = data.correo.strip().lower()
+    tipo = data.tipo
+    valor = data.valor.strip()
 
-    if len(telefono) < 10:
-        raise HTTPException(status_code=400, detail="Ingrese el teléfono con el que se registró (10 dígitos).")
-    if not correo or not EMAIL_REGEX.match(correo):
-        raise HTTPException(status_code=400, detail="Ingrese el correo electrónico con el que se registró.")
+    if tipo == "telefono":
+        telefono = solo_digitos(valor)
+        if len(telefono) < 10:
+            raise HTTPException(status_code=400, detail="Ingrese el teléfono con el que se registró (10 dígitos).")
+        # Se comparan solo dígitos: algunos teléfonos se guardaron con espacios o guiones
+        coincide = lambda p: solo_digitos(p[3]) == telefono
+    elif tipo == "correo":
+        correo = normalizar_texto(valor)
+        if not EMAIL_REGEX.match(correo):
+            raise HTTPException(status_code=400, detail="Ingrese un correo electrónico válido.")
+        coincide = lambda p: normalizar_texto(p[4]) == correo
+    elif tipo == "nombre":
+        palabras = normalizar_texto(valor).split()
+        if len(palabras) < 2 or len("".join(palabras)) < 5:
+            raise HTTPException(status_code=400, detail="Escriba al menos su nombre y un apellido.")
+        coincide = lambda p: all(palabra in normalizar_texto(p[1]).split() for palabra in palabras)
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de búsqueda inválido.")
 
     con = conectar_bd()
     cursor = con.cursor()
     try:
-        # Se comparan solo dígitos: algunos teléfonos se guardaron con espacios o guiones
-        cursor.execute("""SELECT numero_asignado, nombre, sexo, telefono, sector_profesional,
-                          ciudad, telefono_emergencia, correo, condiciones_salud
-                          FROM participantes""")
-        participante = next((p for p in cursor.fetchall() if solo_digitos(p[3]) == telefono), None)
+        cursor.execute("""SELECT numero_asignado, nombre, ciudad, telefono, correo
+                          FROM participantes ORDER BY id""")
+        encontrados = [p for p in cursor.fetchall() if coincide(p)]
     finally:
         con.close()
 
-    mensaje_no_encontrado = "No encontramos un registro con ese teléfono y correo. Verifique que sean los mismos que usó al registrarse."
-    if not participante:
-        raise HTTPException(status_code=404, detail=mensaje_no_encontrado)
+    if not encontrados:
+        raise HTTPException(status_code=404, detail="No encontramos ningún registro con esos datos. Verifique que estén escritos igual que cuando se registró.")
+    if len(encontrados) > RECUPERAR_MAX_RESULTADOS:
+        raise HTTPException(status_code=400, detail="Hay demasiados registros con ese nombre. Escriba su nombre completo o busque por teléfono o correo.")
 
-    numero, nombre, sexo, tel, sector, ciudad, tel_emergencia, correo_registrado, condiciones = participante
-
-    if not (correo_registrado or "").strip():
-        raise HTTPException(status_code=404, detail="Su registro no tiene correo electrónico. Comuníquese con el comité organizador para recuperar su número.")
-    if correo_registrado.strip().lower() != correo:
-        raise HTTPException(status_code=404, detail=mensaje_no_encontrado)
-
-    print(f"🔁 Folio recuperado: {numero} - {nombre}")
+    print(f"🔁 Folio recuperado por {tipo}: {', '.join(p[0] for p in encontrados)}")
 
     return {
-        "numero_asignado": numero,
-        "nombre": nombre,
-        "sexo": sexo,
-        "telefono": tel,
-        "sector_profesional": sector,
-        "ciudad": ciudad,
-        "telefono_emergencia": tel_emergencia,
-        "correo": correo_registrado,
-        "condiciones_salud": condiciones,
-        "imagen_url": f"/api/imagen/{numero}?nombre={quote(nombre)}"
+        "resultados": [
+            {
+                "numero_asignado": numero,
+                "nombre": nombre,
+                "ciudad": ciudad,
+                "telefono_oculto": f"******{solo_digitos(telefono)[-4:]}",
+                "imagen_url": f"/api/imagen/{numero}?nombre={quote(nombre)}"
+            }
+            for numero, nombre, ciudad, telefono, _ in encontrados
+        ]
     }
 
 @app.get("/api/participantes")

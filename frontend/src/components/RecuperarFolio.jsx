@@ -1,36 +1,134 @@
 import React, { useState, useRef } from 'react';
-import { Phone, Mail, Search, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Printer, RotateCcw } from 'lucide-react';
+import { Phone, Mail, User, Search, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Printer, RotateCcw, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiService, downloadUtils } from '../services/api';
 
 const inputClassName = 'w-full px-4 py-3 border-2 border-blue-900/40 rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all duration-300 bg-blue-950/60 text-gray-100';
 
+const TIPOS_BUSQUEDA = [
+  { id: 'telefono', label: 'Teléfono', icon: Phone, type: 'tel', placeholder: 'Ejemplo: 9611234567', etiqueta: 'Teléfono con el que se registró' },
+  { id: 'correo', label: 'Correo', icon: Mail, type: 'email', placeholder: 'Ejemplo: correo@ejemplo.com', etiqueta: 'Correo con el que se registró' },
+  { id: 'nombre', label: 'Nombre', icon: User, type: 'text', placeholder: 'Ejemplo: Juan Pérez López', etiqueta: 'Nombre y apellido con los que se registró' }
+];
+
+// Tarjeta de un registro encontrado: muestra la imagen y permite descargar el PDF
+const ResultadoFolio = ({ participante, mostrarImagen, onVerImagen }) => {
+  const [imageStatus, setImageStatus] = useState('loading');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [error, setError] = useState(null);
+
+  const downloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    setError(null);
+    try {
+      await downloadUtils.downloadParticipantPdf(participante.numero_asignado, participante.nombre, {
+        ciudad: participante.ciudad
+      });
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      setError(err.message);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  return (
+    <div className="p-4 bg-blue-950/50 rounded-xl border border-white/10">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-black text-gray-100 break-words">{participante.nombre}</p>
+          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+            <MapPin className="w-3 h-3" aria-hidden="true" />
+            {participante.ciudad || 'Sin ciudad'} · Tel. {participante.telefono_oculto}
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-xs text-gray-400">Número</p>
+          <p className="text-2xl font-black text-blue-400">{participante.numero_asignado}</p>
+        </div>
+      </div>
+
+      {mostrarImagen ? (
+        <div className="relative mt-4">
+          {imageStatus === 'loading' && (
+            <div className="flex items-center justify-center gap-2 py-16 text-gray-300 text-sm">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Cargando su imagen...
+            </div>
+          )}
+          {imageStatus === 'error' && (
+            <p className="text-sm text-amber-200 text-center">
+              No pudimos mostrar la imagen aquí. Use el botón para descargar su número en PDF.
+            </p>
+          )}
+          <img
+            src={participante.imagen_url}
+            alt={`Imagen del participante ${participante.numero_asignado}`}
+            onLoad={() => setImageStatus('loaded')}
+            onError={() => setImageStatus('error')}
+            className={`w-full h-auto rounded-xl border border-white/20 shadow-lg ${
+              imageStatus === 'loaded' ? 'block' : 'hidden'
+            }`}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onVerImagen}
+          className="mt-4 w-full bg-white/10 hover:bg-white/20 border border-white/20 text-gray-100 px-4 py-2 rounded-xl text-sm font-bold transition-colors duration-300"
+        >
+          Ver imagen
+        </button>
+      )}
+
+      {error && <p className="mt-3 text-sm text-red-200">{error}</p>}
+
+      <button
+        type="button"
+        onClick={downloadPdf}
+        disabled={isGeneratingPdf}
+        className="mt-3 w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-70 disabled:cursor-wait text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
+      >
+        {isGeneratingPdf ? (
+          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+        ) : (
+          <Download className="w-5 h-5 mr-2" />
+        )}
+        {isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF para imprimir'}
+      </button>
+    </div>
+  );
+};
+
 const RecuperarFolio = () => {
   const navigate = useNavigate();
   const resultRef = useRef(null);
-  const [formData, setFormData] = useState({ telefono: '', correo: '' });
+  const [tipo, setTipo] = useState('telefono');
+  const [valor, setValor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [participantData, setParticipantData] = useState(null);
-  // Estado de carga de la imagen mostrada: 'loading' | 'loaded' | 'error'
-  const [imageStatus, setImageStatus] = useState('loading');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [resultados, setResultados] = useState(null);
+  // Números cuya imagen se está mostrando (con un solo resultado se muestra directo)
+  const [imagenesVisibles, setImagenesVisibles] = useState([]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const tipoActual = TIPOS_BUSQUEDA.find(t => t.id === tipo);
+
+  const cambiarTipo = (nuevoTipo) => {
+    setTipo(nuevoTipo);
+    setValor('');
+    setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setParticipantData(null);
+    setResultados(null);
 
     try {
-      const data = await apiService.recuperarFolio(formData.telefono, formData.correo);
-      setImageStatus('loading');
-      setParticipantData({ ...data, numero: data.numero_asignado });
+      const data = await apiService.recuperarFolio(tipo, valor);
+      setResultados(data.resultados);
+      setImagenesVisibles(data.resultados.length === 1 ? [data.resultados[0].numero_asignado] : []);
 
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -43,23 +141,10 @@ const RecuperarFolio = () => {
     }
   };
 
-  const downloadPdf = async () => {
-    setIsGeneratingPdf(true);
-    try {
-      await downloadUtils.downloadParticipantPdf(participantData.numero, participantData.nombre, participantData);
-    } catch (err) {
-      console.error('Error al descargar PDF:', err);
-      setError(err.message);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
-  // Permite buscar otro registro (personas que se registraron varias veces con distintos teléfonos)
   const buscarOtro = () => {
-    setParticipantData(null);
+    setResultados(null);
     setError(null);
-    setFormData({ telefono: '', correo: '' });
+    setValor('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -76,9 +161,9 @@ const RecuperarFolio = () => {
               Recupera tu número
             </h2>
             <p className="text-gray-300">
-              {participantData
+              {resultados
                 ? 'Descargue e imprima su número: será su identificador el día de la carrera'
-                : '¿Ya se registró y no pudo descargar su número, o lo perdió? Ingrese el teléfono y el correo con los que se registró.'}
+                : '¿Ya se registró y no pudo descargar su número, o lo perdió? Búsquelo con su teléfono, su correo o su nombre.'}
             </p>
           </div>
 
@@ -89,66 +174,34 @@ const RecuperarFolio = () => {
             </div>
           )}
 
-          {/* Resultado */}
-          {participantData && (
+          {/* Resultados */}
+          {resultados && (
             <div ref={resultRef} className="mb-6 p-4 rounded-2xl border-2 scroll-mt-24 bg-green-900/50 border-green-400 text-green-100">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 mr-2 text-green-400" />
-                <p className="font-medium">¡Encontramos su registro, {participantData.nombre}!</p>
+              <div className="flex items-center mb-4">
+                <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0 text-green-400" />
+                <p className="font-medium">
+                  {resultados.length === 1
+                    ? '¡Encontramos su registro!'
+                    : `Encontramos ${resultados.length} registros. Ubique el suyo por su nombre y los últimos dígitos de su teléfono.`}
+                </p>
               </div>
 
-              <div className="mt-4 p-4 bg-blue-950/50 rounded-xl">
-                <p className="text-sm text-gray-300 mb-1">Su número de participante:</p>
-                <div className="text-2xl font-black text-blue-400 mb-4 text-center">
-                  {participantData.numero}
-                </div>
+              <div className="space-y-4">
+                {resultados.map(participante => (
+                  <ResultadoFolio
+                    key={participante.numero_asignado}
+                    participante={participante}
+                    mostrarImagen={imagenesVisibles.includes(participante.numero_asignado)}
+                    onVerImagen={() => setImagenesVisibles(prev => [...prev, participante.numero_asignado])}
+                  />
+                ))}
+              </div>
 
-                {imageStatus !== 'error' && (
-                  <div className="relative mb-4">
-                    {imageStatus === 'loading' && (
-                      <div className="flex items-center justify-center gap-2 py-16 text-gray-300 text-sm">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Cargando su imagen...
-                      </div>
-                    )}
-                    <img
-                      src={participantData.imagen_url}
-                      alt={`Imagen del participante ${participantData.numero}`}
-                      onLoad={() => setImageStatus('loaded')}
-                      onError={() => setImageStatus('error')}
-                      className={`w-full h-auto rounded-xl border border-white/20 shadow-lg ${
-                        imageStatus === 'loaded' ? 'block' : 'hidden'
-                      }`}
-                    />
-                  </div>
-                )}
-
-                {imageStatus === 'error' && (
-                  <p className="mb-4 text-sm text-amber-200 text-center">
-                    No pudimos mostrar la imagen aquí. Use el botón para descargar su número en PDF.
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={downloadPdf}
-                  disabled={isGeneratingPdf}
-                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:opacity-70 disabled:cursor-wait text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
-                >
-                  {isGeneratingPdf ? (
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-5 h-5 mr-2" />
-                  )}
-                  {isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF para imprimir'}
-                </button>
-
-                <div role="note" className="mt-4 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3">
-                  <Printer className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
-                  <p className="text-sm text-gray-300 leading-snug">
-                    Imprima su PDF en hoja tamaño carta y llévelo al frente de su playera, sujeto con broches, el día de la carrera.
-                  </p>
-                </div>
+              <div role="note" className="mt-4 flex gap-3 rounded-xl border border-green-300/40 bg-green-400/10 p-3">
+                <Printer className="w-5 h-5 flex-shrink-0 text-green-300" aria-hidden="true" />
+                <p className="text-sm text-gray-300 leading-snug">
+                  Imprima su PDF en hoja tamaño carta y llévelo al frente de su playera, sujeto con broches, el día de la carrera.
+                </p>
               </div>
 
               <button
@@ -157,44 +210,50 @@ const RecuperarFolio = () => {
                 className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center"
               >
                 <RotateCcw className="w-5 h-5 mr-2" />
-                Buscar otro registro
+                Hacer otra búsqueda
               </button>
             </div>
           )}
 
           {/* Formulario */}
-          {!participantData && (
+          {!resultados && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-gray-300 mb-2 font-bold">
-                  <Phone className="w-4 h-4 inline mr-2" />
-                  Teléfono con el que se registró
-                </label>
-                <input
-                  type="tel"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleChange}
-                  className={inputClassName}
-                  placeholder="Ejemplo: 9611234567"
-                  disabled={isLoading}
-                  minLength="10"
-                  required
-                />
+                <p className="block text-gray-300 mb-2 font-bold">Buscar por:</p>
+                <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Buscar por">
+                  {TIPOS_BUSQUEDA.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={tipo === id}
+                      onClick={() => cambiarTipo(id)}
+                      disabled={isLoading}
+                      className={`flex items-center justify-center gap-1 sm:gap-2 px-2 py-3 rounded-2xl text-sm font-bold border-2 transition-all duration-300 ${
+                        tipo === id
+                          ? 'bg-blue-700 border-blue-400 text-white'
+                          : 'bg-blue-950/60 border-blue-900/40 text-gray-300 hover:bg-blue-800/60'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" aria-hidden="true" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
-                <label className="block text-gray-300 mb-2 font-bold">
-                  <Mail className="w-4 h-4 inline mr-2" />
-                  Correo electrónico con el que se registró
+                <label htmlFor="valor-busqueda" className="block text-gray-300 mb-2 font-bold">
+                  <tipoActual.icon className="w-4 h-4 inline mr-2" />
+                  {tipoActual.etiqueta}
                 </label>
                 <input
-                  type="email"
-                  name="correo"
-                  value={formData.correo}
-                  onChange={handleChange}
+                  id="valor-busqueda"
+                  type={tipoActual.type}
+                  value={valor}
+                  onChange={(e) => setValor(e.target.value)}
                   className={inputClassName}
-                  placeholder="Ejemplo: correo@ejemplo.com"
+                  placeholder={tipoActual.placeholder}
                   disabled={isLoading}
                   required
                 />
@@ -202,8 +261,9 @@ const RecuperarFolio = () => {
 
               <div className="bg-blue-950/50 p-4 rounded-xl border border-blue-800/30">
                 <ul className="text-sm text-gray-300 space-y-1">
-                  <li>• Si hizo varios registros, busque cada uno con su teléfono: cada registro tiene su propio número.</li>
-                  <li>• Si no recuerda con qué datos se registró, comuníquese con el comité organizador.</li>
+                  <li>• Si hizo varios registros con el mismo correo, al buscar por correo le aparecerán todos.</li>
+                  <li>• Por nombre, escriba al menos su nombre y un apellido.</li>
+                  <li>• Si no encuentra su registro, comuníquese con el comité organizador.</li>
                 </ul>
               </div>
 

@@ -314,15 +314,15 @@ export const apiService = {
     }
   },
 
-  // Recuperar el número de un participante con su teléfono y correo de registro
-  async recuperarFolio(telefono, correo) {
-    if (!telefono?.trim() || !correo?.trim()) {
-      throw new Error('Ingrese su teléfono y su correo electrónico.');
+  // Recuperar el número de un participante buscando por teléfono, correo o nombre
+  async recuperarFolio(tipo, valor) {
+    if (!valor?.trim()) {
+      throw new Error('Escriba el dato con el que desea buscar.');
     }
 
     const response = await fetchWithTimeout(buildApiUrl('/api/recuperar-folio'), {
       method: 'POST',
-      body: JSON.stringify({ telefono: telefono.trim(), correo: correo.trim() })
+      body: JSON.stringify({ tipo, valor: valor.trim() })
     });
 
     await handleApiError(response);
