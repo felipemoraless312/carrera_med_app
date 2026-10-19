@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Gift, Printer } from 'lucide-react';
+import { Heart, Gift, Printer, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import RegistrationForm from './RegistrationForm';
 import { apiService } from '../services/api';
 
@@ -25,6 +26,7 @@ const REGISTRATION_OPEN = true;
 const PARTICIPANTS_POLL_INTERVAL_MS = 30000;
 
 const RegistrationSection = ({ setActiveSection }) => {
+  const navigate = useNavigate();
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [participantsCount, setParticipantsCount] = useState(0);
 
@@ -154,6 +156,14 @@ const RegistrationSection = ({ setActiveSection }) => {
               <p className="mt-2 text-center text-gray-400 text-xs md:text-sm">
                 ¡Inscripción gratuita para todos los participantes, no olvides llevar tu número de participante impreso!
               </p>
+              <button
+                type="button"
+                onClick={() => navigate('/recuperar-folio')}
+                className="mt-3 w-full py-3 px-5 rounded-xl text-sm md:text-base font-bold bg-white/10 hover:bg-white/20 border border-white/30 text-gray-100 transition-colors duration-300 flex items-center justify-center gap-2"
+              >
+                <Search className="w-4 h-4" aria-hidden="true" />
+                ¿Ya te registraste y perdiste tu número? Recupéralo aquí
+              </button>
             </div>
           </div>
 

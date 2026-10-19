@@ -13,6 +13,7 @@ import ContactSection from './components/ContactSection.jsx';
 import Footer from './components/Footer.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import RifaView from './components/RifaView.jsx';
+import RecuperarFolio from './components/RecuperarFolio.jsx';
 
 // Componentes de administración (crear estos archivos)
 import AttendanceView from './components/AsisList.jsx';
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="/" element={<HeroSection />} />
             <Route path="/informacion" element={<div className="pt-20"><InformationSection /></div>} />
             <Route path="/registro" element={<div className="pt-20"><RegistrationSection /></div>} />
+            <Route path="/recuperar-folio" element={<div className="pt-20"><RecuperarFolio /></div>} />
             <Route path="/trayectoria" element={<div className="pt-20"><HistorySection /></div>} />
             <Route path="/patrocinadores" element={<div className="pt-20"><SponsorsSection /></div>} />
             <Route path="/contacto" element={<div className="pt-20"><ContactSection /></div>} />

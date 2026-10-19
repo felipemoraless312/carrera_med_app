@@ -314,6 +314,21 @@ export const apiService = {
     }
   },
 
+  // Recuperar el número de un participante con su teléfono y correo de registro
+  async recuperarFolio(telefono, correo) {
+    if (!telefono?.trim() || !correo?.trim()) {
+      throw new Error('Ingrese su teléfono y su correo electrónico.');
+    }
+
+    const response = await fetchWithTimeout(buildApiUrl('/api/recuperar-folio'), {
+      method: 'POST',
+      body: JSON.stringify({ telefono: telefono.trim(), correo: correo.trim() })
+    });
+
+    await handleApiError(response);
+    return await response.json();
+  },
+
   // Buscar participante por diferentes criterios
   async buscarParticipante(tipo, valor) {
     try {

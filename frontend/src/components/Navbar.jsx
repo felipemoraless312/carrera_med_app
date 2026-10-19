@@ -13,6 +13,7 @@ const Navbar = () => {
     { id: '/', label: 'Inicio', color: 'hover:text-blue-800' },
     { id: '/informacion', label: 'Información', color: 'hover:text-blue-700' },
     { id: '/registro', label: 'Registro', color: 'hover:text-blue-600' },
+    { id: '/recuperar-folio', label: 'Recuperar folio', color: 'hover:text-blue-600' },
     { id: '/trayectoria', label: 'Historia', color: 'hover:text-gray-400' },
     { id: '/patrocinadores', label: 'Patrocinadores', color: 'hover:text-gray-400' },
    // { id: '/contacto', label: 'Contacto', color: 'hover:text-red-600' }
@@ -102,7 +103,7 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         <div className={`lg:hidden transition-all duration-500 ease-in-out overflow-hidden ${
           isOpen 
-            ? 'max-h-96 opacity-100 pb-6 border-t border-blue-900 mt-4 pt-4' 
+            ? 'max-h-[32rem] opacity-100 pb-6 border-t border-blue-900 mt-4 pt-4' 
             : 'max-h-0 opacity-0'
         }`}>
           <div className="space-y-3">

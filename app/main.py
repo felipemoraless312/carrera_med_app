@@ -14,6 +14,8 @@ import tempfile
 from io import BytesIO
 import pathlib
 import secrets
+import time
+from urllib.parse import quote
 
 # PIN de la rifa: se define con la variable de entorno RIFA_PIN
 RIFA_PIN = os.getenv("RIFA_PIN", "")
@@ -100,6 +102,10 @@ class AsistenciaUpdate(BaseModel):
 class AsistenciaBulkUpdate(BaseModel):
     ids: List[int]
     asistio: bool
+
+class RecuperarFolioRequest(BaseModel):
+    telefono: str = ""
+    correo: str = ""
 
 # Funciones de base de datos
 def conectar_bd():
@@ -455,6 +461,70 @@ async def descargar_imagen(numero_participante: str, request: Request):
             "Content-Type": "image/png"
         }
     )
+
+# Límite de intentos para recuperar folio (por IP), para evitar que adivinen teléfonos
+RECUPERAR_MAX_INTENTOS = 10
+RECUPERAR_VENTANA_SEG = 15 * 60
+intentos_recuperar = {}
+
+def solo_digitos(texto: str) -> str:
+    return re.sub(r"\D", "", texto or "")
+
+@app.post("/api/recuperar-folio")
+async def recuperar_folio(data: RecuperarFolioRequest, request: Request):
+    """Permite a un participante volver a descargar su número con su teléfono y correo"""
+    ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "desconocida")
+    ahora = time.time()
+    recientes = [t for t in intentos_recuperar.get(ip, []) if ahora - t < RECUPERAR_VENTANA_SEG]
+    if len(recientes) >= RECUPERAR_MAX_INTENTOS:
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espere 15 minutos e intente de nuevo.")
+    recientes.append(ahora)
+    intentos_recuperar[ip] = recientes
+
+    telefono = solo_digitos(data.telefono)
+    correo = data.correo.strip().lower()
+
+    if len(telefono) < 10:
+        raise HTTPException(status_code=400, detail="Ingrese el teléfono con el que se registró (10 dígitos).")
+    if not correo or not EMAIL_REGEX.match(correo):
+        raise HTTPException(status_code=400, detail="Ingrese el correo electrónico con el que se registró.")
+
+    con = conectar_bd()
+    cursor = con.cursor()
+    try:
+        # Se comparan solo dígitos: algunos teléfonos se guardaron con espacios o guiones
+        cursor.execute("""SELECT numero_asignado, nombre, sexo, telefono, sector_profesional,
+                          ciudad, telefono_emergencia, correo, condiciones_salud
+                          FROM participantes""")
+        participante = next((p for p in cursor.fetchall() if solo_digitos(p[3]) == telefono), None)
+    finally:
+        con.close()
+
+    mensaje_no_encontrado = "No encontramos un registro con ese teléfono y correo. Verifique que sean los mismos que usó al registrarse."
+    if not participante:
+        raise HTTPException(status_code=404, detail=mensaje_no_encontrado)
+
+    numero, nombre, sexo, tel, sector, ciudad, tel_emergencia, correo_registrado, condiciones = participante
+
+    if not (correo_registrado or "").strip():
+        raise HTTPException(status_code=404, detail="Su registro no tiene correo electrónico. Comuníquese con el comité organizador para recuperar su número.")
+    if correo_registrado.strip().lower() != correo:
+        raise HTTPException(status_code=404, detail=mensaje_no_encontrado)
+
+    print(f"🔁 Folio recuperado: {numero} - {nombre}")
+
+    return {
+        "numero_asignado": numero,
+        "nombre": nombre,
+        "sexo": sexo,
+        "telefono": tel,
+        "sector_profesional": sector,
+        "ciudad": ciudad,
+        "telefono_emergencia": tel_emergencia,
+        "correo": correo_registrado,
+        "condiciones_salud": condiciones,
+        "imagen_url": f"/api/imagen/{numero}?nombre={quote(nombre)}"
+    }
 
 @app.get("/api/participantes")
 async def listar_participantes(limit: int = 100, offset: int = 0, search: Optional[str] = None):
