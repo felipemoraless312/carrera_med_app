@@ -319,6 +319,44 @@ async def get_sectores():
     """Endpoint para obtener los sectores profesionales disponibles"""
     return {"sectores": SECTORES_SALUD}
 
+# Registros viejos usaban otros nombres de rama; se agrupan en la lista actual
+SECTORES_EQUIVALENTES = {
+    "medicina general": "Médico",
+    "medicina especializada": "Médico especialista",
+    "enfermeria": "Lic. en enfermería",
+    "area diferente a la salud": "Público en general",
+}
+
+@app.get("/api/estadisticas")
+async def estadisticas():
+    """Totales agregados para la landing (sin datos personales)"""
+    canonicos = {normalizar_texto(s): s for s in SECTORES_SALUD}
+    conn = conectar_bd()
+    try:
+        filas = conn.execute(
+            "SELECT sexo, sector_profesional, COUNT(*) FROM participantes GROUP BY sexo, sector_profesional"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    total = 0
+    por_sexo = {"Femenino": 0, "Masculino": 0}
+    sectores = {s: {"sector": s, "total": 0, "Femenino": 0, "Masculino": 0} for s in SECTORES_SALUD}
+    for sexo, sector, cantidad in filas:
+        total += cantidad
+        clave = normalizar_texto(sector)
+        nombre = canonicos.get(clave) or SECTORES_EQUIVALENTES.get(clave) or "Otro sector de salud"
+        sectores[nombre]["total"] += cantidad
+        if sexo in por_sexo:
+            por_sexo[sexo] += cantidad
+            sectores[nombre][sexo] += cantidad
+
+    return {
+        "total": total,
+        "por_sexo": por_sexo,
+        "por_sector": sorted((s for s in sectores.values() if s["total"]), key=lambda s: -s["total"]),
+    }
+
 @app.post("/api/registro", response_model=ParticipanteResponse)
 async def registrar_participante(participante: ParticipanteCreate):
     """Registrar un nuevo participante"""
