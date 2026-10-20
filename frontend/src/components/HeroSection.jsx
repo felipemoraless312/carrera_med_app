@@ -13,7 +13,6 @@ import {
   Download,
   ExternalLink,
 } from 'lucide-react';
-import EstadisticasSection from './EstadisticasSection.jsx';
 
 const useCountdown = (targetDate) => {
   const [timeLeft, setTimeLeft] = useState({
@@ -378,9 +377,6 @@ const HeroSection = () => {
           </svg>
         </div>
       </div>
-
-      {/* ============ ESTADÍSTICAS DE INSCRIPCIÓN ============ */}
-      <EstadisticasSection />
 
       {/* ============ CONGRESOS Y REUNIONES ============ */}
       <div className="bg-blue-950 py-8 md:py-12">

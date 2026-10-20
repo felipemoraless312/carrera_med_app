@@ -319,42 +319,41 @@ async def get_sectores():
     """Endpoint para obtener los sectores profesionales disponibles"""
     return {"sectores": SECTORES_SALUD}
 
-# Registros viejos usaban otros nombres de rama; se agrupan en la lista actual
-SECTORES_EQUIVALENTES = {
-    "medicina general": "Médico",
-    "medicina especializada": "Médico especialista",
-    "enfermeria": "Lic. en enfermería",
-    "area diferente a la salud": "Público en general",
-}
-
 @app.get("/api/estadisticas")
 async def estadisticas():
-    """Totales agregados para la landing (sin datos personales)"""
-    canonicos = {normalizar_texto(s): s for s in SECTORES_SALUD}
+    """Totales agregados de toda la BD para el panel de asistencia (sin datos personales)"""
     conn = conectar_bd()
     try:
         filas = conn.execute(
-            "SELECT sexo, sector_profesional, COUNT(*) FROM participantes GROUP BY sexo, sector_profesional"
+            """SELECT TRIM(sector_profesional), sexo, COUNT(*), SUM(asistio)
+               FROM participantes GROUP BY 1, 2"""
         ).fetchall()
     finally:
         conn.close()
 
-    total = 0
-    por_sexo = {"Femenino": 0, "Masculino": 0}
-    sectores = {s: {"sector": s, "total": 0, "Femenino": 0, "Masculino": 0} for s in SECTORES_SALUD}
-    for sexo, sector, cantidad in filas:
+    total = asistieron = 0
+    por_sexo = {s: {"total": 0, "asistieron": 0} for s in ("Femenino", "Masculino")}
+    sectores = {}
+    for sector, sexo, cantidad, llegaron in filas:
+        llegaron = llegaron or 0
         total += cantidad
-        clave = normalizar_texto(sector)
-        nombre = canonicos.get(clave) or SECTORES_EQUIVALENTES.get(clave) or "Otro sector de salud"
-        sectores[nombre]["total"] += cantidad
+        asistieron += llegaron
+        fila = sectores.setdefault(sector or "Sin especificar", {
+            "sector": sector or "Sin especificar", "total": 0, "Femenino": 0, "Masculino": 0, "asistieron": 0
+        })
+        fila["total"] += cantidad
+        fila["asistieron"] += llegaron
         if sexo in por_sexo:
-            por_sexo[sexo] += cantidad
-            sectores[nombre][sexo] += cantidad
+            fila[sexo] += cantidad
+            por_sexo[sexo]["total"] += cantidad
+            por_sexo[sexo]["asistieron"] += llegaron
 
     return {
         "total": total,
+        "asistieron": asistieron,
         "por_sexo": por_sexo,
-        "por_sector": sorted((s for s in sectores.values() if s["total"]), key=lambda s: -s["total"]),
+        "por_sector": sorted(sectores.values(), key=lambda s: (-s["total"], s["sector"])),
+        "actualizado": datetime.now().isoformat(),
     }
 
 @app.post("/api/registro", response_model=ParticipanteResponse)

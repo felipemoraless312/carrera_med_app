@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, Search, CheckCircle, XCircle, RefreshCw, ArrowLeft,
   ChevronLeft, ChevronRight, ChevronDown, Wrench, Download, Loader2,
@@ -6,85 +6,13 @@ import {
 } from 'lucide-react';
 import { useAttendance } from '../hooks/useApi';
 import { downloadUtils } from '../services/api';
+import EstadisticasPanel from './EstadisticasPanel.jsx';
 
 const EVENT_YEAR = 2026;
 
 // ---------------------------------------------------------------------------
 // Sub-componentes de visualización (sin dependencias externas)
 // ---------------------------------------------------------------------------
-
-const AttendanceDonut = ({ percentage, size = 132, strokeWidth = 14 }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(100, percentage));
-  const offset = circumference - (clamped / 100) * circumference;
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#3DDC97"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl sm:text-3xl font-bold text-gray-50 tabular-nums tracking-tight">
-          {clamped.toFixed(0)}%
-        </span>
-        <span className="text-[11px] text-gray-400">asistencia</span>
-      </div>
-    </div>
-  );
-};
-
-const BarBreakdown = ({ title, rows, accent = '#6C8EFF' }) => {
-  const max = Math.max(1, ...rows.map(r => r.count));
-  return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-5">
-      <h3 className="text-sm font-medium text-gray-300 mb-4">{title}</h3>
-      {rows.length === 0 ? (
-        <p className="text-sm text-gray-500">Sin datos suficientes.</p>
-      ) : (
-        <div className="space-y-3">
-          {rows.map(row => (
-            <div key={row.label}>
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-sm text-gray-200 truncate pr-2">{row.label}</span>
-                <span className="text-sm text-gray-400 tabular-nums flex-shrink-0">{row.count}</span>
-              </div>
-              <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${(row.count / max) * 100}%`,
-                    backgroundColor: row.color || accent,
-                    transition: 'width 0.4s ease'
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const initials = (nombre = '') =>
   nombre
@@ -193,6 +121,8 @@ const AttendanceView = ({ onBack }) => {
     lastSearchTime: null
   });
   const itemsPerPage = 300;
+  // Cambia cuando se modifica la asistencia para refrescar las estadísticas generales
+  const [statsKey, setStatsKey] = useState(0);
 
   const {
     participantes,
@@ -213,6 +143,7 @@ const AttendanceView = ({ onBack }) => {
     try {
       const data = await fetchParticipantes(itemsPerPage, currentPage * itemsPerPage);
       setFilteredParticipantes(data.participantes || []);
+      setStatsKey(k => k + 1);
     } catch (error) {
       console.error('Error al cargar participantes:', error);
       setFilteredParticipantes([]);
@@ -234,6 +165,7 @@ const AttendanceView = ({ onBack }) => {
 
     try {
       await updateAsistencia(id, nuevoEstado);
+      setStatsKey(k => k + 1);
       const fecha = nuevoEstado ? new Date().toISOString() : null;
       setFilteredParticipantes(prev => prev.map(p =>
         p.id === id ? { ...p, asistio: nuevoEstado, fecha_asistencia: fecha } : p
@@ -266,6 +198,7 @@ const AttendanceView = ({ onBack }) => {
     setSaving(true);
     try {
       await updateAsistenciaMasiva(idsParticipantes, estado);
+      setStatsKey(k => k + 1);
       setFilteredParticipantes(prev => prev.map(p =>
         idsParticipantes.includes(p.id) ? { ...p, asistio: estado } : p
       ));
@@ -582,37 +515,6 @@ const AttendanceView = ({ onBack }) => {
     alert('Diagnóstico completado - revisa la consola del navegador (F12)');
   };
 
-  const stats = useMemo(() => {
-    const total = filteredParticipantes.length;
-    const asistieron = filteredParticipantes.filter(p => p.asistio).length;
-    const pendientes = total - asistieron;
-    const porcentaje = total > 0 ? (asistieron / total) * 100 : 0;
-    return { total, asistieron, pendientes, porcentaje };
-  }, [filteredParticipantes]);
-
-  const bySexo = useMemo(() => {
-    const counts = {};
-    filteredParticipantes.forEach(p => {
-      const key = p.sexo || 'Sin especificar';
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    const colorFor = (label) =>
-      label === 'Masculino' ? '#6C8EFF' : label === 'Femenino' ? '#E68FC0' : '#8B93A7';
-    return Object.entries(counts).map(([label, count]) => ({ label, count, color: colorFor(label) }));
-  }, [filteredParticipantes]);
-
-  const byProfesion = useMemo(() => {
-    const counts = {};
-    filteredParticipantes.forEach(p => {
-      const key = p.sector_profesional || 'Sin especificar';
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([label, count]) => ({ label, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [filteredParticipantes]);
-
   const scopeLabel = isGlobalSearch
     ? `resultados de búsqueda para "${searchTerm}"`
     : `página ${currentPage + 1}`;
@@ -688,48 +590,8 @@ const AttendanceView = ({ onBack }) => {
           </div>
         )}
 
-        {/* Panel principal de progreso + KPIs */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_repeat(3,minmax(0,1fr))] gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-6 flex items-center gap-4 sm:gap-6">
-            <AttendanceDonut percentage={stats.porcentaje} />
-            <div className="min-w-0">
-              <h2 className="text-sm font-medium text-gray-300 mb-1">Progreso de asistencia</h2>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                {stats.asistieron} de {stats.total} inscritos ya confirmaron su llegada.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-400">Total inscritos</span>
-              <Users className="w-4 h-4 text-gray-500" />
-            </div>
-            <div className="text-3xl font-bold text-gray-50 tabular-nums">{stats.total}</div>
-          </div>
-
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-400">Asistieron</span>
-              <CheckCircle className="w-4 h-4 text-[#3DDC97]" />
-            </div>
-            <div className="text-3xl font-bold text-[#3DDC97] tabular-nums">{stats.asistieron}</div>
-          </div>
-
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-400">Pendientes</span>
-              <XCircle className="w-4 h-4 text-[#F5B942]" />
-            </div>
-            <div className="text-3xl font-bold text-[#F5B942] tabular-nums">{stats.pendientes}</div>
-          </div>
-        </div>
-
-        {/* Desgloses */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <BarBreakdown title="Por sexo" rows={bySexo} />
-          <BarBreakdown title="Top profesiones" rows={byProfesion} accent="#6C8EFF" />
-        </div>
+        {/* Estadísticas generales de toda la base de datos */}
+        <EstadisticasPanel refreshKey={statsKey} />
 
         {/* Búsqueda y acciones masivas */}
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-3 sm:p-4 lg:p-5 mb-4 sm:mb-6">
