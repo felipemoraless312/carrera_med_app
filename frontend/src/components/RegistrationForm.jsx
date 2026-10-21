@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Phone, User, Briefcase, MapPin, PhoneCall, Mail, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift, Printer } from 'lucide-react';
+import { Users, Phone, User, Briefcase, MapPin, PhoneCall, Mail, HeartPulse, Download, ArrowLeft, CheckCircle, AlertCircle, Loader2, Gift, Printer, FileText, X } from 'lucide-react';
 import { apiService, downloadUtils } from '../services/api';
+import { CARTA_RESPONSIVA } from '../data/cartaResponsiva';
 
 const RegistrationForm = ({ onBack, setActiveSection }) => {
   const resultRef = useRef(null);
@@ -13,7 +14,8 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
     telefono_emergencia: '',
     correo: '',
     tiene_condicion: '',
-    condiciones_salud: ''
+    condiciones_salud: '',
+    acepta_carta_responsiva: false
   });
   const [sectoresSalud, setSectoresSalud] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +24,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   // Estado de carga de la imagen mostrada: 'loading' | 'loaded' | 'error'
   const [imageStatus, setImageStatus] = useState('loading');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showCarta, setShowCarta] = useState(false);
 
   // Cargar sectores desde la API
   useEffect(() => {
@@ -53,10 +56,10 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -72,7 +75,8 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
       // El servicio API ya maneja las validaciones
       const data = await apiService.registrarParticipante({
         ...formData,
-        condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud : 'Ninguna'
+        condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud : 'Ninguna',
+        carta_responsiva_version: CARTA_RESPONSIVA.version
       });
 
       // Registro exitoso - USAR LOS DATOS REALES DEL SERVIDOR
@@ -94,6 +98,7 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         telefono_emergencia: formData.telefono_emergencia.trim(),
         correo: formData.correo.trim(),
         condiciones_salud: formData.tiene_condicion === 'Si' ? formData.condiciones_salud.trim() : 'Ninguna',
+        carta_responsiva: `Aceptada el ${new Date().toLocaleDateString('es-MX')}`,
         imagen_url: data.imagen_url
       });
 
@@ -107,7 +112,8 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
         telefono_emergencia: '',
         correo: '',
         tiene_condicion: '',
-        condiciones_salud: ''
+        condiciones_salud: '',
+        acepta_carta_responsiva: false
       });
 
       // Scroll automático hacia el resultado (inicio del bloque para que se vea la imagen)
@@ -459,6 +465,38 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
                 </ul>
               </div>
 
+              {/* Aceptación de la carta responsiva */}
+              <div className="bg-blue-950/50 p-4 rounded-xl border border-blue-800/30">
+                <h4 className="font-bold text-gray-200 mb-2 flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Carta responsiva
+                </h4>
+                <p className="text-sm text-gray-300 mb-3">
+                  Al llenar sus datos y registrarse, acepta la carta responsiva del evento.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowCarta(true)}
+                    className="text-blue-300 underline hover:text-blue-200 font-semibold"
+                  >
+                    Leer carta responsiva
+                  </button>
+                </p>
+                <label className="flex items-start gap-3 cursor-pointer text-sm text-gray-200">
+                  <input
+                    type="checkbox"
+                    name="acepta_carta_responsiva"
+                    checked={formData.acepta_carta_responsiva}
+                    onChange={handleChange}
+                    className="mt-0.5 w-5 h-5 flex-shrink-0 accent-blue-500"
+                    disabled={isLoading}
+                    required
+                  />
+                  <span>
+                    He leído y acepto la carta responsiva. Declaro que mis datos son verídicos y que participo bajo mi propia responsabilidad.
+                  </span>
+                </label>
+              </div>
+
               {/* Botones */}
               <div className="flex gap-4">
                 <button
@@ -502,6 +540,61 @@ const RegistrationForm = ({ onBack, setActiveSection }) => {
           )}
         </div>
       </div>
+
+      {/* Ventana con el texto de la carta responsiva */}
+      {showCarta && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowCarta(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="carta-responsiva-titulo"
+            className="bg-blue-900 border border-blue-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-blue-800">
+              <h3 id="carta-responsiva-titulo" className="text-xl font-black text-gray-100 flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-blue-400" />
+                {CARTA_RESPONSIVA.titulo}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCarta(false)}
+                className="text-gray-400 hover:text-gray-100"
+                aria-label="Cerrar"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-3 text-sm text-gray-300 leading-relaxed">
+              {CARTA_RESPONSIVA.parrafos.map((parrafo, index) => (
+                <p key={index}>{parrafo}</p>
+              ))}
+            </div>
+            <div className="flex gap-3 p-5 border-t border-blue-800">
+              <button
+                type="button"
+                onClick={() => setShowCarta(false)}
+                className="px-5 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-2xl font-bold transition-all duration-300"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({ ...prev, acepta_carta_responsiva: true }));
+                  setShowCarta(false);
+                }}
+                className="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-2xl font-bold transition-all duration-300"
+              >
+                Acepto la carta responsiva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -90,6 +90,9 @@ class ParticipanteCreate(BaseModel):
     telefono_emergencia: str = ""
     correo: str = ""
     condiciones_salud: str = ""
+    # Aceptación de la carta responsiva y versión del texto que se mostró al participante
+    acepta_carta_responsiva: bool = False
+    carta_responsiva_version: str = ""
 
 class ParticipanteResponse(BaseModel):
     id: int
@@ -134,7 +137,10 @@ def crear_tablas():
             ciudad TEXT,
             telefono_emergencia TEXT,
             condiciones_salud TEXT,
-            correo TEXT
+            correo TEXT,
+            acepta_carta_responsiva INTEGER NOT NULL DEFAULT 0,
+            fecha_aceptacion_carta TIMESTAMP,
+            version_carta_responsiva TEXT
         )""")
 
         cursor.execute("PRAGMA table_info(participantes)")
@@ -148,6 +154,13 @@ def crear_tablas():
         for columna_nueva in ('ciudad', 'telefono_emergencia', 'condiciones_salud', 'correo'):
             if columna_nueva not in columnas:
                 cursor.execute(f"ALTER TABLE participantes ADD COLUMN {columna_nueva} TEXT")
+                print(f"🔧 Migración: columna '{columna_nueva}' agregada")
+        if 'acepta_carta_responsiva' not in columnas:
+            cursor.execute("ALTER TABLE participantes ADD COLUMN acepta_carta_responsiva INTEGER NOT NULL DEFAULT 0")
+            print("🔧 Migración: columna 'acepta_carta_responsiva' agregada")
+        for columna_nueva, tipo in (('fecha_aceptacion_carta', 'TIMESTAMP'), ('version_carta_responsiva', 'TEXT')):
+            if columna_nueva not in columnas:
+                cursor.execute(f"ALTER TABLE participantes ADD COLUMN {columna_nueva} {tipo}")
                 print(f"🔧 Migración: columna '{columna_nueva}' agregada")
 
         # Índice único de teléfono para bases ya existentes (ALTER TABLE no permite agregar UNIQUE directo)
@@ -391,6 +404,10 @@ async def registrar_participante(participante: ParticipanteCreate):
 
     condiciones_salud = participante.condiciones_salud.strip() or "Ninguna"
 
+    if not participante.acepta_carta_responsiva:
+        raise HTTPException(status_code=400, detail="Debe aceptar la carta responsiva para registrarse.")
+    version_carta = participante.carta_responsiva_version.strip()[:50] or None
+
     con = conectar_bd()
     cursor = con.cursor()
 
@@ -415,11 +432,13 @@ async def registrar_participante(participante: ParticipanteCreate):
         # Insertar el nuevo participante
         cursor.execute("""INSERT INTO participantes
                          (id, nombre, sexo, telefono, sector_profesional, numero_asignado,
-                          ciudad, telefono_emergencia, condiciones_salud, correo)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                          ciudad, telefono_emergencia, condiciones_salud, correo,
+                          acepta_carta_responsiva, fecha_aceptacion_carta, version_carta_responsiva)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, ?)""",
                       (next_id, participante.nombre.strip(), participante.sexo,
                        participante.telefono.strip(), participante.sector_profesional, numero_asignado,
-                       participante.ciudad.strip(), telefono_emergencia, condiciones_salud, correo))
+                       participante.ciudad.strip(), telefono_emergencia, condiciones_salud, correo,
+                       version_carta))
 
         con.commit()
         print(f"✅ Participante registrado: {numero_asignado} - {participante.nombre.strip()}")  # Debug log
@@ -599,7 +618,8 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
                 fecha_registro, numero_asignado, asistio, fecha_asistencia,
-                ciudad, telefono_emergencia, condiciones_salud, correo
+                ciudad, telefono_emergencia, condiciones_salud, correo,
+                acepta_carta_responsiva, fecha_aceptacion_carta, version_carta_responsiva
                 {base_query}
                 ORDER BY fecha_registro DESC LIMIT ? OFFSET ?""",
             params + [limit, offset]
@@ -621,7 +641,10 @@ async def listar_participantes(limit: int = 100, offset: int = 0, search: Option
                     "ciudad": p[9],
                     "telefono_emergencia": p[10],
                     "condiciones_salud": p[11],
-                    "correo": p[12]
+                    "correo": p[12],
+                    "acepta_carta_responsiva": bool(p[13]),
+                    "fecha_aceptacion_carta": p[14],
+                    "version_carta_responsiva": p[15]
                 }
                 for p in participantes
             ],
@@ -651,7 +674,8 @@ async def buscar_participante(tipo: str, valor: str):
         cursor.execute(
             f"""SELECT id, nombre, sexo, telefono, sector_profesional,
                 fecha_registro, numero_asignado, asistio, fecha_asistencia,
-                ciudad, telefono_emergencia, condiciones_salud, correo
+                ciudad, telefono_emergencia, condiciones_salud, correo,
+                acepta_carta_responsiva, fecha_aceptacion_carta, version_carta_responsiva
                 FROM participantes WHERE {columna} {operador} ?""",
             (valor_busqueda,)
         )
@@ -673,7 +697,10 @@ async def buscar_participante(tipo: str, valor: str):
             "ciudad": resultado[9],
             "telefono_emergencia": resultado[10],
             "condiciones_salud": resultado[11],
-            "correo": resultado[12]
+            "correo": resultado[12],
+            "acepta_carta_responsiva": bool(resultado[13]),
+            "fecha_aceptacion_carta": resultado[14],
+            "version_carta_responsiva": resultado[15]
         }
     except HTTPException:
         raise

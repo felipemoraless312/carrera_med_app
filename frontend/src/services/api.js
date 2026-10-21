@@ -225,6 +225,10 @@ export const apiService = {
         throw new Error('Debe ingresar un correo electrónico válido');
       }
 
+      if (!participanteData.acepta_carta_responsiva) {
+        throw new Error('Debe aceptar la carta responsiva para registrarse');
+      }
+
       const response = await fetchWithTimeout(buildApiUrl('/api/registro'), {
         method: 'POST',
         body: JSON.stringify({
@@ -235,7 +239,9 @@ export const apiService = {
           ciudad: participanteData.ciudad.trim(),
           telefono_emergencia: participanteData.telefono_emergencia.trim(),
           correo: participanteData.correo.trim(),
-          condiciones_salud: participanteData.condiciones_salud?.trim() || 'Ninguna'
+          condiciones_salud: participanteData.condiciones_salud?.trim() || 'Ninguna',
+          acepta_carta_responsiva: true,
+          carta_responsiva_version: participanteData.carta_responsiva_version || ''
         })
       });
 
@@ -251,6 +257,7 @@ export const apiService = {
           error.message.includes('obligatoria') ||
           error.message.includes('distinto') ||
           error.message.includes('correo') ||
+          error.message.includes('carta responsiva') ||
           error.message.includes('Ya existe') ||
           error.message.includes('límite máximo')) {
         throw error;
@@ -442,7 +449,7 @@ export const downloadUtils = {
   },
 
   // Descargar PDF tamaño carta listo para imprimir: número en la mitad superior, la otra mitad en blanco
-  // datos: { sexo, telefono, sector_profesional, ciudad, telefono_emergencia, correo, condiciones_salud }
+  // datos: { sexo, telefono, sector_profesional, ciudad, telefono_emergencia, correo, condiciones_salud, carta_responsiva }
   async downloadParticipantPdf(numeroParticipante, nombreParticipante, datos = {}) {
     try {
       const blob = await apiService.descargarImagen(numeroParticipante, nombreParticipante);
@@ -530,7 +537,13 @@ export const downloadUtils = {
         ['Teléfono', datos.telefono],
         ['Tel. de emergencia', datos.telefono_emergencia],
         ['Correo', datos.correo],
-        ['Condiciones de salud', datos.condiciones_salud]
+        ['Condiciones de salud', datos.condiciones_salud],
+        // Desde el registro llega ya como texto; desde la lista de asistencia llega la aceptación guardada
+        ['Carta responsiva', datos.carta_responsiva || (datos.acepta_carta_responsiva
+          ? `Aceptada${datos.fecha_aceptacion_carta
+              ? ` el ${new Date(String(datos.fecha_aceptacion_carta).replace(' ', 'T') + 'Z').toLocaleDateString('es-MX')}`
+              : ''}`
+          : '')]
       ].filter(([, valor]) => valor && String(valor).trim());
 
       pdf.setFontSize(12);

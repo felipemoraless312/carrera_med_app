@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Search, CheckCircle, XCircle, RefreshCw, ArrowLeft,
   ChevronLeft, ChevronRight, ChevronDown, Wrench, Download, Loader2,
-  Phone, PhoneCall, Mail, MapPin, Briefcase, HeartPulse, Calendar, User
+  Phone, PhoneCall, Mail, MapPin, Briefcase, HeartPulse, Calendar, User, FileText
 } from 'lucide-react';
 import { useAttendance } from '../hooks/useApi';
 import { downloadUtils } from '../services/api';
@@ -74,6 +74,12 @@ const ParticipantDetails = ({ participante: p }) => (
     <DetailItem icon={Briefcase} label="Profesión / sector">{p.sector_profesional}</DetailItem>
     <DetailItem icon={HeartPulse} label="Condiciones de salud" highlight={tieneCondicion(p)}>
       {p.condiciones_salud || 'Ninguna'}
+    </DetailItem>
+    <DetailItem icon={FileText} label="Carta responsiva">
+      {p.acepta_carta_responsiva
+        ? `Aceptada${p.fecha_aceptacion_carta ? ` el ${formatFecha(p.fecha_aceptacion_carta)}` : ''}${
+            p.version_carta_responsiva ? ` · versión ${p.version_carta_responsiva}` : ''}`
+        : 'No registrada (inscrito antes de la carta)'}
     </DetailItem>
     <DetailItem icon={Calendar} label="Fecha de registro">{formatFecha(p.fecha_registro)}</DetailItem>
     <DetailItem icon={CheckCircle} label="Llegada registrada">
