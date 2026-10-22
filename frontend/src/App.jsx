@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 // Componentes públicos
 import Navbar from './components/Navbar.jsx';
@@ -14,6 +14,15 @@ import Footer from './components/Footer.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import RifaView from './components/RifaView.jsx';
 import RecuperarFolio from './components/RecuperarFolio.jsx';
+import PantallaPatrocinadores from './components/PantallaPatrocinadores.jsx';
+
+// Rutas de pantalla completa que no llevan barra de navegación ni pie de página
+const RUTAS_SIN_MARCO = ['/pantalla-patrocinadores'];
+
+const ConMarco = ({ children }) => {
+  const location = useLocation();
+  return RUTAS_SIN_MARCO.includes(location.pathname) ? null : children;
+};
 
 // Componentes de administración (crear estos archivos)
 import AttendanceView from './components/AsisList.jsx';
@@ -24,7 +33,7 @@ const App = () => {
     <div className="min-h-screen w-full flex flex-col bg-gray-50">
       <Router>
         <ScrollToTop />
-        <Navbar />
+        <ConMarco><Navbar /></ConMarco>
         <main className="flex-1 w-full transition-all duration-500 ease-in-out">
           <Routes>
             {/* Rutas públicas */}
@@ -35,6 +44,7 @@ const App = () => {
             <Route path="/trayectoria" element={<div className="pt-20"><HistorySection /></div>} />
             <Route path="/patrocinadores" element={<div className="pt-20"><SponsorsSection /></div>} />
             <Route path="/contacto" element={<div className="pt-20"><ContactSection /></div>} />
+            <Route path="/pantalla-patrocinadores" element={<PantallaPatrocinadores />} />
             
             {/* Rutas secretas de administración */}
             <Route 
@@ -51,7 +61,7 @@ const App = () => {
             />
           </Routes>
         </main>
-        <Footer />
+        <ConMarco><Footer /></ConMarco>
       </Router>
     </div>
   );
