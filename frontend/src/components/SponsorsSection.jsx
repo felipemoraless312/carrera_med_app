@@ -48,7 +48,6 @@ const SponsorsSection = () => {
     { name: 'Jovimaga', image: '/images/patrocinadores_circulo/jovimaga.webp', circular: true },
     { name: 'Taquitos de la Comisión', image: '/images/patrocinadores_circulo/la-comision.webp', circular: true },
     { name: 'Natura & Avon', image: '/images/patrocinadores_circulo/natura-avon.webp', circular: true },
-    { name: 'Plumín', image: '/images/patrocinadores_circulo/plumin.webp', circular: true },
     { name: 'Budelli', image: '/images/patrocinadores_circulo/budelli.webp', circular: true },
     { name: 'EMA Escuela de Medicina Alternativa', image: '/images/nuevos_patrocinadores/ema.jpeg' },
     { name: 'Afrodita Productos Regionales', image: '/images/nuevos_patrocinadores/afrodita.jpeg' },
@@ -63,7 +62,13 @@ const SponsorsSection = () => {
     { name: 'Salud Digna', image: '/images/patrocinadores/salud-digna.jpg' },
     { name: 'VP Hospital', image: '/images/patrocinadores_circulo/vp-hospital.webp', circular: true },
     { name: 'Hospital Rojas', image: '/images/patrocinadores_circulo/hospital-rojas.webp', circular: true },
-    { name: "Nature's Sunshine Products", image: '/images/patrocinadores_circulo/natures-sunshine.webp', circular: true }
+    { name: "Nature's Sunshine Products", image: '/images/patrocinadores_circulo/natures-sunshine.webp', circular: true },
+    { name: 'Banco de Sangre MC Blood Service', image: '/images/patrocinadores_circulo/blood-service.webp', circular: true },
+    { name: 'Farmacias del Ahorro', image: '/images/patrocinadores_circulo/farmacias-del-ahorro.webp', circular: true },
+    { name: 'La Radio del Diario', image: '/images/patrocinadores_circulo/la-radio-del-diario.webp', circular: true },
+    { name: 'Madame Chantal', image: '/images/patrocinadores_circulo/madame-chantal.webp', circular: true },
+    { name: 'Cuidado con el Cochi Shop', image: '/images/patrocinadores_circulo/cuidado-con-el-cochi.webp', circular: true },
+    { name: 'Clínica Estética Dental', image: '/images/patrocinadores_circulo/clinica-estetica-dental.webp', circular: true }
   ];
 
   const organizingCommittee = [
