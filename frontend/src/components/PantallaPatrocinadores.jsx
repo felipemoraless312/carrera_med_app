@@ -3,24 +3,33 @@ import { SPONSORS } from '../data/sponsors.js';
 
 // Pantalla para proyectar el día del evento: solo patrocinadores, sin barra ni pie de página
 const EDICION = 'XXXIII';
-const POR_PAGINA = 12;
-const SEGUNDOS_POR_PAGINA = 8;
+// Segundos que tarda cada fila en dar una vuelta completa
+const DURACION_S = 110;
 
-const paginas = [];
-for (let i = 0; i < SPONSORS.length; i += POR_PAGINA) {
-  paginas.push(SPONSORS.slice(i, i + POR_PAGINA));
-}
+// Dos filas que se mueven en sentidos opuestos, cada una con la mitad de los patrocinadores
+const mitad = Math.ceil(SPONSORS.length / 2);
+const FILAS = [
+  { sponsors: SPONSORS.slice(0, mitad), sentido: 'izquierda' },
+  { sponsors: SPONSORS.slice(mitad), sentido: 'derecha' },
+];
+
+const LogoPatrocinador = ({ sponsor }) => (
+  <div className="flex w-[min(14vw,26vh)] flex-shrink-0 flex-col items-center">
+    <div className="aspect-square w-full overflow-hidden rounded-full border-4 border-white/80 bg-white shadow-2xl">
+      <img
+        src={sponsor.image}
+        alt={sponsor.name}
+        className={`h-full w-full ${sponsor.circular ? 'object-cover' : 'object-contain p-[8%]'}`}
+      />
+    </div>
+    <p className="mt-[1.2vh] line-clamp-2 text-center text-[1.9vh] font-semibold leading-tight text-gray-100">
+      {sponsor.name}
+    </p>
+  </div>
+);
 
 const PantallaPatrocinadores = () => {
-  const [pagina, setPagina] = useState(0);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPagina((p) => (p + 1) % paginas.length);
-    }, SEGUNDOS_POR_PAGINA * 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     const onChange = () => setPantallaCompleta(Boolean(document.fullscreenElement));
@@ -39,12 +48,13 @@ const PantallaPatrocinadores = () => {
   return (
     <div
       onClick={alternarPantallaCompleta}
-      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-gradient-to-b from-blue-950 via-blue-900 to-blue-950 text-white select-none ${
+      className={`fixed inset-0 z-50 flex flex-col overflow-hidden bg-blue-950 text-white select-none ${
         pantallaCompleta ? 'cursor-none' : 'cursor-pointer'
       }`}
+      style={{ backgroundImage: 'radial-gradient(ellipse at center, rgba(30, 64, 175, 0.55), transparent 70%)' }}
     >
       {/* Encabezado */}
-      <header className="flex items-center justify-center gap-[3vw] pt-[3vh] pb-[2vh]">
+      <header className="flex items-center justify-center gap-[3vw] pt-[3vh] pb-[1vh]">
         <img src="/images/logo.png" alt="Carrera del Día del Médico" className="h-[15vh] w-[15vh] drop-shadow-xl" />
         <div className="text-center">
           <h1 className="font-extrabold leading-none tracking-tight text-[6vh]">
@@ -57,50 +67,43 @@ const PantallaPatrocinadores = () => {
         <img src="/images/logo.png" alt="" className="h-[15vh] w-[15vh] drop-shadow-xl" />
       </header>
 
-      {/* Logos: se muestran por páginas que rotan solas */}
-      <main className="relative flex-1">
-        {paginas.map((grupo, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 flex flex-wrap content-center justify-center gap-x-[2vw] gap-y-[3vh] px-[4vw] transition-opacity duration-1000 ${
-              i === pagina ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            {grupo.map((sponsor) => (
-              <div key={sponsor.name} className="flex w-[min(13vw,27vh)] flex-col items-center">
-                <div className="aspect-square w-full overflow-hidden rounded-full border-4 border-white/80 bg-white shadow-2xl">
-                  <img
-                    src={sponsor.image}
-                    alt={sponsor.name}
-                    className={`h-full w-full ${sponsor.circular ? 'object-cover' : 'object-contain p-[8%]'}`}
-                  />
+      {/* Carrusel: cada fila se duplica para que el desplazamiento sea continuo */}
+      <main className="relative flex flex-1 flex-col justify-evenly">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[8vw] bg-gradient-to-r from-blue-950 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-[8vw] bg-gradient-to-l from-blue-950 to-transparent" />
+
+        {FILAS.map((fila, i) => (
+          <div key={i} className="overflow-hidden">
+            <div className={`pantalla-track pantalla-track-${fila.sentido} flex w-max`}>
+              {[...fila.sponsors, ...fila.sponsors].map((sponsor, j) => (
+                <div key={`${sponsor.name}-${j}`} className="px-[1.2vw]">
+                  <LogoPatrocinador sponsor={sponsor} />
                 </div>
-                <p className="mt-[1.2vh] line-clamp-2 text-center text-[1.9vh] font-semibold leading-tight text-gray-100">
-                  {sponsor.name}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ))}
       </main>
-
-      {/* Indicador de página */}
-      <footer className="flex justify-center gap-3 pb-[3vh]">
-        {paginas.map((_, i) => (
-          <span
-            key={i}
-            className={`h-[1.2vh] rounded-full transition-all duration-500 ${
-              i === pagina ? 'w-[4vh] bg-yellow-400' : 'w-[1.2vh] bg-white/40'
-            }`}
-          />
-        ))}
-      </footer>
 
       {!pantallaCompleta && (
         <p className="absolute bottom-[1vh] right-[1.5vw] text-xs text-blue-300/70">
           Clic en cualquier parte para pantalla completa
         </p>
       )}
+
+      <style>{`
+        @keyframes pantalla-izquierda {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @keyframes pantalla-derecha {
+          from { transform: translateX(-50%); }
+          to { transform: translateX(0); }
+        }
+        .pantalla-track { will-change: transform; }
+        .pantalla-track-izquierda { animation: pantalla-izquierda ${DURACION_S}s linear infinite; }
+        .pantalla-track-derecha { animation: pantalla-derecha ${DURACION_S}s linear infinite; }
+      `}</style>
     </div>
   );
 };
