@@ -68,7 +68,8 @@ const SponsorsSection = () => {
     { name: 'La Radio del Diario', image: '/images/patrocinadores_circulo/la-radio-del-diario.webp', circular: true },
     { name: 'Madame Chantal', image: '/images/patrocinadores_circulo/madame-chantal.webp', circular: true },
     { name: 'Cuidado con el Cochi Shop', image: '/images/patrocinadores_circulo/cuidado-con-el-cochi.webp', circular: true },
-    { name: 'Clínica Estética Dental', image: '/images/patrocinadores_circulo/clinica-estetica-dental.webp', circular: true }
+    { name: 'Clínica Estética Dental', image: '/images/patrocinadores_circulo/clinica-estetica-dental.webp', circular: true },
+    { name: 'Rovisan Laboratorio de Análisis Clínicos', image: '/images/patrocinadores_circulo/rovisan.webp', circular: true }
   ];
 
   const organizingCommittee = [
