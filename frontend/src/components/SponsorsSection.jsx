@@ -140,9 +140,9 @@ const SponsorsSection = () => {
               <div
                 key={`${sponsor.name}-${index}`}
                 ref={index === 0 ? firstSponsorRef : undefined}
-                className="flex flex-col items-center justify-center text-center flex-shrink-0 w-28 sm:w-32 md:w-36 transition-transform duration-300 hover:scale-105"
+                className="flex flex-col items-center justify-center text-center flex-shrink-0 w-32 sm:w-40 md:w-48 transition-transform duration-300 hover:scale-105"
               >
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border border-blue-700 bg-blue-800 shadow-inner mb-2">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full overflow-hidden border border-blue-700 bg-blue-800 shadow-inner mb-2">
                   <img
                     src={sponsor.image || '/images/patrocinadores/logo-provisional.svg'}
                     alt={sponsor.name || 'Patrocinador'}
@@ -156,7 +156,7 @@ const SponsorsSection = () => {
                   />
                 </div>
                 {sponsor.name && (
-                  <p className="text-[9px] sm:text-[12px] font-semibold text-gray-200 text-center leading-tight">
+                  <p className="text-[10px] sm:text-[13px] font-semibold text-gray-200 text-center leading-tight">
                     {sponsor.name}
                   </p>
                 )}
