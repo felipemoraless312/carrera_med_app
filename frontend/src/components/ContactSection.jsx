@@ -54,7 +54,7 @@ const Footer = ({ setActiveSection }) => {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold text-gray-100">Carrera del Médico</h3>
-                  <p className="text-gray-400 text-sm">Chiapas 2025</p>
+                  <p className="text-gray-400 text-sm">Chiapas 2026</p>
                 </div>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed max-w-md">
@@ -120,7 +120,7 @@ const Footer = ({ setActiveSection }) => {
                   <Calendar className="w-4 h-4 mr-2 text-blue-400" />
                   <span className="font-semibold text-sm text-gray-100">Próximo Evento</span>
                 </div>
-                <p className="text-sm text-gray-200">18 de Octubre, 2025</p>
+                <p className="text-sm text-gray-200">25 de Octubre, 2026</p>
                 <p className="text-xs opacity-80 text-gray-400">Parque Central</p>
               </div>
             </div>
@@ -133,7 +133,7 @@ const Footer = ({ setActiveSection }) => {
         {/* Copyright */}
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-            <p>&copy; 2025 Carrera del Día del Médico. Todos los derechos reservados.</p>
+            <p>&copy; 2026 Carrera del Día del Médico. Todos los derechos reservados.</p>
             <div className="flex items-center mt-4 md:mt-0">
               <Heart className="w-4 h-4 text-red-500 mr-2" />
               <p>Desarrollado por Numma para la comunidad médica</p>
