@@ -55,5 +55,6 @@ export const SPONSORS = [
   { name: 'La Escuelita', image: '/images/patrocinadores/logos/la-escuelita.webp' },
   { name: 'Pauleteria', image: '/images/patrocinadores/logos/pauleteria.webp' },
   { name: 'Diario Media Group', image: '/images/patrocinadores/logos/diario-media-group.webp' },
-  { name: 'DA Sportwear', image: '/images/patrocinadores/logos/da-sportwear.webp' }
+  { name: 'DA Sportwear', image: '/images/patrocinadores/logos/da-sportwear.webp' },
+  { name: 'Clínica de Maternidad Santa Cecilia', image: '/images/patrocinadores/logos/santa-cecilia.webp' }
 ];
