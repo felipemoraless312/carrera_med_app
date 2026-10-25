@@ -49,5 +49,12 @@ export const SPONSORS = [
   { name: 'Fundación Toledo A.C.', image: '/images/patrocinadores/logos/fundacion-toledo.webp' },
   { name: 'Secretaría de Salud de Chiapas', image: '/images/patrocinadores/logos/salud-chiapas.webp' },
   { name: 'Chopo', image: '/images/patrocinadores/circulares/chopo.webp', circular: true },
-  { name: 'Cruz Roja Mexicana Delegación Chiapas', image: '/images/patrocinadores/logos/cruz-roja.webp' }
+  { name: 'Cruz Roja Mexicana Delegación Chiapas', image: '/images/patrocinadores/logos/cruz-roja.webp' },
+  { name: 'Centro Pedagógico Braulios', image: '/images/patrocinadores/logos/braulios.webp' },
+  { name: 'Chiapas Lee', image: '/images/patrocinadores/circulares/chiapas-lee.webp', circular: true },
+  { name: "Sari's Jalot", image: '/images/patrocinadores/logos/saris-jalot.webp' },
+  { name: 'La Escuelita', image: '/images/patrocinadores/logos/la-escuelita.webp' },
+  { name: 'Pauleteria', image: '/images/patrocinadores/logos/pauleteria.webp' },
+  { name: 'Diario Media Group', image: '/images/patrocinadores/logos/diario-media-group.webp' },
+  { name: 'DA Sportwear', image: '/images/patrocinadores/logos/da-sportwear.webp' }
 ];
