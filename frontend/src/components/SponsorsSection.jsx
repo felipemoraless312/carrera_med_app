@@ -1,6 +1,10 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import { SPONSORS as sponsors } from '../data/sponsors.js';
-import { COMITE as organizingCommittee, FOTOS_COMITE as committeePhotos } from '../data/comite.js';
+import {
+  COMITE as organizingCommittee,
+  DESARROLLADORES as developmentTeam,
+  FOTOS_COMITE as committeePhotos,
+} from '../data/comite.js';
 import { Heart, Users } from 'lucide-react';
 
 const SPONSORS_DURATION_S = 100;
@@ -24,11 +28,6 @@ const SponsorsSection = () => {
     const fraccion = (((desplazamiento / periodo) % 1) + 1) % 1;
     track.style.animationDelay = `-${fraccion * SPONSORS_DURATION_S}s`;
   }, []);
-
-  const developmentTeam = [
-    { name: 'Ing. Cesar Gomez Aguilera', image: '/images/personas/aguilera.png' },
-    { name: 'Ing. Luis Felipe Morales Gutierrez', image: '/images/personas/feli.jpeg' }
-  ];
 
   // Duplicamos el arreglo para lograr el efecto de carrusel infinito sin saltos
   const sponsorsLoop = [...sponsors, ...sponsors];

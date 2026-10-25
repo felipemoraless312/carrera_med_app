@@ -15,5 +15,11 @@ export const COMITE = [
   { name: 'Dr. Francisco A. Ramos Narváez', position: 'Cirujano Gastroenterologo', image: '/images/personas/ramos.png' }
 ];
 
+// Equipo de desarrollo de la página; en la pantalla para proyectar también aparecen como parte del comité
+export const DESARROLLADORES = [
+  { name: 'Ing. Cesar Gomez Aguilera', image: '/images/personas/aguilera.png' },
+  { name: 'Ing. Luis Felipe Morales Gutierrez', image: '/images/personas/feli.jpeg' }
+];
+
 // Fotos grupales del comité (en /images/comite)
 export const FOTOS_COMITE = ['comite3.jpg', 'comite.jpg', 'comite2.jpg'];

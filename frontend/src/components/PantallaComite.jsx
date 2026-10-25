@@ -1,40 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
-import { COMITE, FOTOS_COMITE } from '../data/comite.js';
+import { COMITE, DESARROLLADORES, FOTOS_COMITE } from '../data/comite.js';
 
 // Pantalla para proyectar el día del evento: fotos del comité organizador, sin barra ni pie de página
 const EDICION = 'XXXIII';
 // Segundos que se muestra cada foto grupal
 const SEGUNDOS_POR_FOTO = 8;
 // Segundos que tarda la franja de integrantes en dar una vuelta completa
-const DURACION_S = 60;
+const DURACION_S = 90;
 
-const Integrante = ({ integrante }) => {
-  const [sinFoto, setSinFoto] = useState(!integrante.image);
+// En la pantalla solo se muestran los nombres; los desarrolladores también forman parte del comité
+const INTEGRANTES = [...COMITE, ...DESARROLLADORES];
 
-  return (
-    <div className="flex w-[min(13vw,22vh)] flex-shrink-0 flex-col items-center">
-      <div className="flex aspect-square w-[65%] items-center justify-center overflow-hidden rounded-full border-4 border-white/80 bg-blue-800 shadow-2xl">
-        {sinFoto ? (
-          <Users className="h-1/2 w-1/2 text-blue-300" />
-        ) : (
-          <img
-            src={integrante.image}
-            alt={integrante.name}
-            className="h-full w-full object-cover"
-            onError={() => setSinFoto(true)}
-          />
-        )}
-      </div>
-      <p className="mt-[1vh] line-clamp-2 text-center text-[1.9vh] font-semibold leading-tight text-gray-100">
-        {integrante.name}
-      </p>
-      {integrante.position && (
-        <p className="mt-[0.3vh] line-clamp-2 text-center text-[1.5vh] leading-tight text-blue-200">{integrante.position}</p>
-      )}
-    </div>
-  );
-};
+const Integrante = ({ integrante }) => (
+  <div className="flex items-center gap-[1.2vw] whitespace-nowrap">
+    <span className="h-[1.2vh] w-[1.2vh] rounded-full bg-yellow-400" />
+    <p className="text-[3.2vh] font-semibold text-gray-100">{integrante.name}</p>
+  </div>
+);
 
 const PantallaComite = () => {
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
@@ -103,13 +85,13 @@ const PantallaComite = () => {
       </main>
 
       {/* Integrantes: la franja se duplica para que el desplazamiento sea continuo */}
-      <section className="relative py-[2.5vh]">
+      <section className="relative py-[3.5vh]">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[8vw] bg-gradient-to-r from-blue-950 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-[8vw] bg-gradient-to-l from-blue-950 to-transparent" />
         <div className="overflow-hidden">
           <div className="pantalla-comite-track flex w-max">
-            {[...COMITE, ...COMITE].map((integrante, j) => (
-              <div key={`${integrante.name}-${j}`} className="px-[1vw]">
+            {[...INTEGRANTES, ...INTEGRANTES].map((integrante, j) => (
+              <div key={`${integrante.name}-${j}`} className="px-[1.5vw]">
                 <Integrante integrante={integrante} />
               </div>
             ))}
