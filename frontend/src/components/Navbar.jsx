@@ -43,7 +43,7 @@ const Navbar = () => {
             <div className="relative">
               {!logoError ? (
                 <img 
-                  src="/images/logo.png" 
+                  src="/images/marca/logo.png" 
                   alt="Logo Carrera del Médico"
                   className="w-14 h-14 object-contain group-hover:scale-110 transition-all duration-300"
                   onError={() => setLogoError(true)}

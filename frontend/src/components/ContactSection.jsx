@@ -42,7 +42,7 @@ const Footer = ({ setActiveSection }) => {
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-3 rounded-full">
                   <img 
-                    src="/images/logo.png" 
+                    src="/images/marca/logo.png" 
                     alt="Logo Carrera del Médico"
                     className="w-16 h-16 object-contain"
                     onError={(e) => {

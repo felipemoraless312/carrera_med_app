@@ -55,7 +55,7 @@ const PantallaPatrocinadores = () => {
     >
       {/* Encabezado */}
       <header className="flex items-center justify-center gap-[3vw] pt-[3vh] pb-[1vh]">
-        <img src="/images/logo.png" alt="Carrera del Día del Médico" className="h-[15vh] w-[15vh] drop-shadow-xl" />
+        <img src="/images/marca/logo.png" alt="Carrera del Día del Médico" className="h-[15vh] w-[15vh] drop-shadow-xl" />
         <div className="text-center">
           <h1 className="font-extrabold leading-none tracking-tight text-[6vh]">
             <span className="text-yellow-400">{EDICION}</span> Carrera del Día del Médico
@@ -64,7 +64,7 @@ const PantallaPatrocinadores = () => {
             Gracias a nuestros patrocinadores
           </p>
         </div>
-        <img src="/images/logo.png" alt="" className="h-[15vh] w-[15vh] drop-shadow-xl" />
+        <img src="/images/marca/logo.png" alt="" className="h-[15vh] w-[15vh] drop-shadow-xl" />
       </header>
 
       {/* Carrusel: cada fila se duplica para que el desplazamiento sea continuo */}
