@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ArrowLeft, Maximize2, Lock, Search, RefreshCw, Trophy } from 'lucide-react';
+import {
+  ArrowLeft, Maximize2, Minimize2, Lock, Search, RefreshCw, Trophy, Volume2, VolumeX, RotateCcw, FlaskConical,
+} from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Configuración de la ruleta
 // ---------------------------------------------------------------------------
-const SIZE = 400;
+const EDICION = 'XXXIII';
+const SIZE = 460;
 const C = SIZE / 2;
-const R = 190;
+const R = 192;            // radio de las casillas
+const RIM_R = 212;        // radio del aro dorado
+const FOCOS = 24;         // focos alrededor del aro
 // Tonos claros para la tómbola; el texto va en oscuro para que se lea bien
 const COLORS = ['#93C5FD', '#FDE68A', '#86EFAC', '#F9A8D4', '#C4B5FD', '#67E8F9'];
 const SLICE_TEXT = '#0F172A';
@@ -20,7 +25,8 @@ const sliceColor = (i, total) => {
 const IDLE_SPEED = 5;     // °/s cuando está en reposo (giro lento)
 const FAST_SPEED = 720;   // °/s al iniciar el sorteo
 const ACCEL = 900;        // °/s²
-const DECEL_MS = 6000;    // duración de la frenada
+const DECEL_MS = 7000;    // duración de la frenada
+const VUELTAS_FRENADA = 5;
 
 const polar = (deg, r) => {
   const rad = (deg * Math.PI) / 180;
@@ -34,12 +40,108 @@ const slicePath = (a1, a2) => {
   return `M${C},${C} L${x1},${y1} A${R},${R} 0 0 1 ${x2},${y2} Z`;
 };
 
-const truncate = (s, n = 14) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+const truncate = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+// "luis felipe MORALES gutierrez" -> "Luis Felipe Morales Gutierrez"
+const formatoNombre = (s) =>
+  s.trim().toLowerCase().replace(/\s+/g, ' ').replace(/(^|\s)(\p{L})/gu, (m, sp, l) => sp + l.toUpperCase());
+
+// En la ruleta solo cabe nombre + primer apellido
+const nombreCorto = (s) => {
+  const w = formatoNombre(s).split(' ');
+  const corto = w.length >= 4 ? `${w[0]} ${w[2]}` : w.slice(0, 2).join(' ');
+  return truncate(corto, 16);
+};
 
 const ESTADO_STYLE = {
   pendiente: 'bg-[#F5B942]/15 text-[#F5B942] border-[#F5B942]/30',
   entregado: 'bg-[#3DDC97]/15 text-[#3DDC97] border-[#3DDC97]/30',
   anulado: 'bg-white/[0.04] text-gray-500 border-white/10 line-through',
+};
+
+// ---------------------------------------------------------------------------
+// Sonidos (Web Audio, sin archivos)
+// ---------------------------------------------------------------------------
+const crearSonidos = () => {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  const ctx = new AC();
+
+  const nota = (freq, inicio, dur, tipo = 'triangle', vol = 0.18) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = tipo;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime + inicio);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + inicio + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(ctx.currentTime + inicio);
+    osc.stop(ctx.currentTime + inicio + dur + 0.02);
+  };
+
+  return {
+    reanudar: () => ctx.state === 'suspended' && ctx.resume(),
+    tick: () => nota(1400, 0, 0.035, 'square', 0.05),
+    fanfarria: () => {
+      [523.25, 659.25, 783.99].forEach((f, i) => nota(f, i * 0.13, 0.22));
+      nota(1046.5, 0.39, 0.7, 'triangle', 0.22);
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Confeti sobre un canvas (sin librerías)
+// ---------------------------------------------------------------------------
+const CONFETI_COLORES = ['#F5B942', '#FDE68A', '#93C5FD', '#86EFAC', '#F9A8D4', '#FFFFFF'];
+
+const lanzarConfeti = (canvas) => {
+  if (!canvas) return () => {};
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const piezas = Array.from({ length: 160 }, () => ({
+    x: width / 2 + (Math.random() - 0.5) * width * 0.3,
+    y: height * 0.45,
+    vx: (Math.random() - 0.5) * 14,
+    vy: -Math.random() * 15 - 5,
+    giro: Math.random() * Math.PI,
+    vgiro: (Math.random() - 0.5) * 0.4,
+    w: 6 + Math.random() * 6,
+    h: 10 + Math.random() * 8,
+    color: CONFETI_COLORES[Math.floor(Math.random() * CONFETI_COLORES.length)],
+  }));
+
+  let raf;
+  const inicio = performance.now();
+  const frame = (now) => {
+    const t = now - inicio;
+    ctx.clearRect(0, 0, width, height);
+    ctx.globalAlpha = t > 3000 ? Math.max(0, 1 - (t - 3000) / 1000) : 1;
+    piezas.forEach((p) => {
+      p.vy += 0.35;
+      p.vx *= 0.99;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.giro += p.vgiro;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.giro);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.giro)));
+      ctx.restore();
+    });
+    if (t < 4000) raf = requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, width, height);
+  };
+  raf = requestAnimationFrame(frame);
+  return () => {
+    cancelAnimationFrame(raf);
+    ctx.clearRect(0, 0, width, height);
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -54,22 +156,43 @@ const RifaView = ({ onBack }) => {
   const [premio, setPremio] = useState('');
   const [slots, setSlots] = useState([]);
   const [elegibles, setElegibles] = useState(0);
+  const [excluidosPrueba, setExcluidosPrueba] = useState(0);
+  const [listaExcluidos, setListaExcluidos] = useState(null);
   const [ganadores, setGanadores] = useState([]);
   const [filtro, setFiltro] = useState('');
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
   const [error, setError] = useState('');
+  const [sonido, setSonido] = useState(true);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
+  const [reinicio, setReinicio] = useState(null); // null | { texto, enviando }
 
   const stageRef = useRef(null);
   const wheelRef = useRef(null);
+  const pointerRef = useRef(null);
+  const confetiRef = useRef(null);
   const angleRef = useRef(0);
   const speedRef = useRef(IDLE_SPEED);
   const phaseRef = useRef('idle'); // idle | accel | decel
   const decelRef = useRef(null);
+  const kickRef = useRef(0);       // rebote de la flecha al pasar cada casilla
+  const sliceRef = useRef(-1);
+  const segRef = useRef(360);
+  const sonidosRef = useRef(null);
+  const sonidoRef = useRef(true);
   const reducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   );
+
+  useEffect(() => { sonidoRef.current = sonido; }, [sonido]);
+  useEffect(() => { segRef.current = 360 / Math.max(slots.length, 1); }, [slots.length]);
+
+  useEffect(() => {
+    const onChange = () => setPantallaCompleta(document.fullscreenElement === stageRef.current);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   // -- API ------------------------------------------------------------------
   const call = useCallback(async (path, options = {}) => {
@@ -88,8 +211,9 @@ const RifaView = ({ onBack }) => {
 
   const loadElegibles = useCallback(async () => {
     try {
-      const d = await call(`/elegibles?solo_asistentes=${soloAsistentes}`);
+      const d = await call(`/elegibles?solo_asistentes=${soloAsistentes}&muestra=24`);
       setElegibles(d.total);
+      setExcluidosPrueba(d.excluidos_prueba ?? 0);
       setSlots(d.muestra.map((m) => m.nombre));
     } catch (e) {
       setError(e.message);
@@ -104,6 +228,19 @@ const RifaView = ({ onBack }) => {
       setError(e.message);
     }
   }, [call]);
+
+  const toggleExcluidos = async () => {
+    if (listaExcluidos) {
+      setListaExcluidos(null);
+      return;
+    }
+    try {
+      const d = await call('/excluidos');
+      setListaExcluidos(d.excluidos);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -142,7 +279,7 @@ const RifaView = ({ onBack }) => {
       } else if (phase === 'decel') {
         const d = decelRef.current;
         const t = Math.min((now - d.start) / d.duration, 1);
-        angleRef.current = d.from + d.delta * (1 - Math.pow(1 - t, 3)); // ease-out cúbico
+        angleRef.current = d.from + d.delta * (1 - Math.pow(1 - t, 4)); // ease-out cuártico
         if (t >= 1) {
           phaseRef.current = 'idle';
           speedRef.current = IDLE_SPEED;
@@ -150,7 +287,20 @@ const RifaView = ({ onBack }) => {
         }
       }
 
-      wheelRef.current?.setAttribute('transform', `rotate(${angleRef.current % 360} ${C} ${C})`);
+      // Casilla bajo la flecha: cuando cambia, la flecha rebota y suena un clic
+      const rot = ((angleRef.current % 360) + 360) % 360;
+      const casilla = Math.floor(((360 - rot) % 360) / segRef.current);
+      if (casilla !== sliceRef.current) {
+        sliceRef.current = casilla;
+        if (phase !== 'idle') {
+          kickRef.current = -22;
+          if (sonidoRef.current) sonidosRef.current?.tick();
+        }
+      }
+      kickRef.current *= Math.exp(-dt * 14);
+
+      wheelRef.current?.setAttribute('transform', `rotate(${rot} ${C} ${C})`);
+      pointerRef.current?.setAttribute('transform', `rotate(${kickRef.current} ${C} 14)`);
       raf = requestAnimationFrame(frame);
     };
 
@@ -158,22 +308,30 @@ const RifaView = ({ onBack }) => {
     return () => cancelAnimationFrame(raf);
   }, [authed]);
 
+  // Confeti cada vez que aparece un ganador
+  useEffect(() => {
+    if (!winner || reducedMotion.current) return undefined;
+    return lanzarConfeti(confetiRef.current);
+  }, [winner]);
+
   // -- Sorteo ---------------------------------------------------------------
   const handleSpin = async () => {
-    if (spinning || elegibles < 1 || slots.length < 1) return;
+    if (spinning || winner || elegibles < 1 || slots.length < 1) return;
+    if (!sonidosRef.current) sonidosRef.current = crearSonidos();
+    sonidosRef.current?.reanudar();
     setSpinning(true);
     setError('');
     speedRef.current = IDLE_SPEED;
     phaseRef.current = reducedMotion.current ? 'idle' : 'accel';
 
     try {
-      // El ganador lo decide el servidor; la ruleta gira mientras tanto (mín. 0.8 s)
+      // El ganador lo decide el servidor; la ruleta gira mientras tanto (mín. 1.2 s)
       const [g] = await Promise.all([
         call('/girar', {
           method: 'POST',
           body: JSON.stringify({ solo_asistentes: soloAsistentes, premio: premio.trim() || null }),
         }),
-        new Promise((r) => setTimeout(r, reducedMotion.current ? 0 : 800)),
+        new Promise((r) => setTimeout(r, reducedMotion.current ? 0 : 1200)),
       ]);
 
       // Se coloca el nombre ganador en una casilla al azar y se frena sobre ella
@@ -189,12 +347,13 @@ const RifaView = ({ onBack }) => {
 
       decelRef.current = {
         from,
-        delta: 1440 + adjust, // 4 vueltas + ajuste hasta la casilla
+        delta: 360 * VUELTAS_FRENADA + adjust,
         start: performance.now(),
         duration: reducedMotion.current ? 1500 : DECEL_MS,
         onEnd: () => {
           setWinner(g);
           setSpinning(false);
+          if (sonidoRef.current) sonidosRef.current?.fanfarria();
           loadGanadores();
         },
       };
@@ -206,6 +365,20 @@ const RifaView = ({ onBack }) => {
       setSpinning(false);
     }
   };
+
+  // Barra espaciadora para girar (útil al proyectar en pantalla completa)
+  const spinRef = useRef(handleSpin);
+  spinRef.current = handleSpin;
+  useEffect(() => {
+    if (!authed) return undefined;
+    const onKey = (e) => {
+      if (e.code !== 'Space' || ['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+      e.preventDefault();
+      spinRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [authed]);
 
   const updateGanador = async (id, body) => {
     try {
@@ -226,7 +399,24 @@ const RifaView = ({ onBack }) => {
     closeModal();
   };
 
-  const goFullscreen = () => stageRef.current?.requestFullscreen?.();
+  const handleReiniciar = async (e) => {
+    e.preventDefault();
+    setReinicio((r) => ({ ...r, enviando: true }));
+    try {
+      await call('/reiniciar', { method: 'POST', body: JSON.stringify({ confirmacion: reinicio.texto }) });
+      setReinicio(null);
+      setFiltro('');
+      await Promise.all([loadGanadores(), loadElegibles()]);
+    } catch (err) {
+      setError(err.message);
+      setReinicio((r) => ({ ...r, enviando: false }));
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else stageRef.current?.requestFullscreen?.().catch(() => {});
+  };
 
   const ganadoresFiltrados = useMemo(() => {
     const q = filtro.trim().toLowerCase();
@@ -238,6 +428,11 @@ const RifaView = ({ onBack }) => {
       `#${g.numero_ganador}` === q
     );
   }, [ganadores, filtro]);
+
+  const ultimosGanadores = useMemo(
+    () => ganadores.filter((g) => g.estado !== 'anulado').slice(0, 5),
+    [ganadores]
+  );
 
   // -- PIN ------------------------------------------------------------------
   if (!authed) {
@@ -275,7 +470,8 @@ const RifaView = ({ onBack }) => {
   // -- Ruleta ---------------------------------------------------------------
   const n = Math.max(slots.length, 1);
   const seg = 360 / n;
-  const fontSize = Math.max(9, Math.min(14, ((2 * Math.PI * 110) / n) * 0.45));
+  const fontSize = Math.max(9, Math.min(15, ((2 * Math.PI * 120) / n) * 0.45));
+  const ganadoresVigentes = ganadores.filter((g) => g.estado !== 'anulado').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0A0E1A] via-[#0D1326] to-[#080B14] pt-24 pb-10">
@@ -292,21 +488,21 @@ const RifaView = ({ onBack }) => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-50">Rifa</h1>
               <p className="text-xs sm:text-sm text-gray-400">
-                {elegibles} participantes elegibles · {ganadores.filter((g) => g.estado !== 'anulado').length} ganadores
+                {elegibles} participantes elegibles · {ganadoresVigentes} ganadores
               </p>
             </div>
           </div>
           <button
-            onClick={goFullscreen}
+            onClick={toggleFullscreen}
             className="flex items-center gap-2 px-3 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-gray-300 rounded-xl text-sm"
           >
             <Maximize2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Pantalla completa</span>
+            <span className="hidden sm:inline">Proyectar ruleta</span>
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 bg-[#C94B45]/10 border border-[#C94B45]/40 rounded-xl p-3 text-sm text-red-100 flex justify-between">
+          <div className="mb-4 bg-[#C94B45]/10 border border-[#C94B45]/40 rounded-xl p-3 text-sm text-red-100 flex justify-between gap-3">
             <span>{error}</span>
             <button onClick={() => setError('')} className="underline">Cerrar</button>
           </div>
@@ -316,15 +512,66 @@ const RifaView = ({ onBack }) => {
           {/* Escenario: ruleta + controles (esta zona se proyecta en pantalla completa) */}
           <div
             ref={stageRef}
-            className="bg-[#0A0E1A] border border-white/10 rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center"
+            className={`relative overflow-hidden flex flex-col items-center justify-center ${
+              pantallaCompleta
+                ? 'h-screen w-screen p-[2vh] bg-[#0A0E1A]'
+                : 'bg-[#0A0E1A] border border-white/10 rounded-2xl p-4 sm:p-6'
+            }`}
+            style={{ backgroundImage: 'radial-gradient(ellipse at center, rgba(79, 99, 210, 0.28), transparent 65%)' }}
           >
+            {/* Encabezado del escenario */}
+            <div className="flex items-center gap-3 mb-2 text-center">
+              <img src="/images/marca/logo.png" alt="" className={pantallaCompleta ? 'h-[9vh] w-[9vh]' : 'h-12 w-12'} />
+              <div>
+                <p className={`font-black tracking-tight text-gray-50 ${pantallaCompleta ? 'text-[4.5vh]' : 'text-xl sm:text-2xl'}`}>
+                  Gran <span className="text-[#F5B942]">Rifa</span>
+                </p>
+                <p className={`text-blue-200 ${pantallaCompleta ? 'text-[2.2vh]' : 'text-xs sm:text-sm'}`}>
+                  {EDICION} Carrera del Día del Médico
+                </p>
+              </div>
+            </div>
+            {premio.trim() && (
+              <p className={`mb-2 px-4 py-1 rounded-full bg-[#F5B942]/15 border border-[#F5B942]/40 text-[#F5B942] font-semibold ${
+                pantallaCompleta ? 'text-[2.6vh]' : 'text-sm'
+              }`}>
+                Premio: {premio.trim()}
+              </p>
+            )}
+
             <svg
               viewBox={`0 0 ${SIZE} ${SIZE}`}
-              className="w-full max-w-[min(90vw,70vh,560px)]"
+              className={`w-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)] ${
+                pantallaCompleta ? 'max-w-[min(90vw,62vh)]' : 'max-w-[min(90vw,64vh,560px)]'
+              } ${spinning ? 'rifa-girando' : ''}`}
               role="img"
               aria-label="Ruleta de participantes"
             >
-              <g ref={wheelRef} style={{ transition: 'none' }}>
+              <defs>
+                <linearGradient id="rifa-aro" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#FDE68A" />
+                  <stop offset="45%" stopColor="#F5B942" />
+                  <stop offset="100%" stopColor="#B7791F" />
+                </linearGradient>
+                <radialGradient id="rifa-brillo" cx="50%" cy="50%" r="50%">
+                  <stop offset="55%" stopColor="#000000" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+                </radialGradient>
+                <radialGradient id="rifa-centro" cx="40%" cy="35%" r="70%">
+                  <stop offset="0%" stopColor="#FFFFFF" />
+                  <stop offset="100%" stopColor="#DBEAFE" />
+                </radialGradient>
+              </defs>
+
+              {/* Aro dorado con focos */}
+              <circle cx={C} cy={C} r={RIM_R} fill="url(#rifa-aro)" />
+              <circle cx={C} cy={C} r={RIM_R - 14} fill="#0F172A" />
+              {Array.from({ length: FOCOS }, (_, i) => {
+                const [x, y] = polar((i * 360) / FOCOS, RIM_R - 7);
+                return <circle key={i} cx={x} cy={y} r="4.2" className={`rifa-foco ${i % 2 ? 'rifa-foco-b' : ''}`} />;
+              })}
+
+              <g ref={wheelRef}>
                 {slots.length < 2 ? (
                   <circle cx={C} cy={C} r={R} fill={COLORS[0]} />
                 ) : (
@@ -343,50 +590,157 @@ const RifaView = ({ onBack }) => {
                         textAnchor="end"
                         dominantBaseline="middle"
                         fontSize={fontSize}
-                        fontWeight="600"
+                        fontWeight="700"
                         fill={SLICE_TEXT}
                       >
-                        {truncate(name)}
+                        {nombreCorto(name)}
                       </text>
                     </g>
                   ))
                 )}
               </g>
+              <circle cx={C} cy={C} r={R} fill="url(#rifa-brillo)" pointerEvents="none" />
+
               {elegibles < 1 && (
-                <text x={C} y={C + 60} textAnchor="middle" fontSize="16" fontWeight="600" fill={SLICE_TEXT}>
+                <text x={C} y={C + 70} textAnchor="middle" fontSize="16" fontWeight="700" fill={SLICE_TEXT}>
                   Sin participantes elegibles
                 </text>
               )}
-              <circle cx={C} cy={C} r="22" fill="#FFFFFF" stroke="#3B82F6" strokeWidth="4" />
-              <path d={`M${C - 14},6 L${C + 14},6 L${C},38 Z`} fill="#F5B942" stroke="#0A0E1A" strokeWidth="2" />
+
+              {/* Centro con el logo */}
+              <circle cx={C} cy={C} r="40" fill="url(#rifa-centro)" stroke="url(#rifa-aro)" strokeWidth="6" />
+              <image href="/images/marca/logo.png" x={C - 31} y={C - 31} width="62" height="62" />
+
+              {/* Flecha: rebota al pasar cada casilla */}
+              <g ref={pointerRef}>
+                <path
+                  d={`M${C - 17},4 L${C + 17},4 L${C},46 Z`}
+                  fill="#F5B942"
+                  stroke="#0A0E1A"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                />
+                <circle cx={C} cy="14" r="5" fill="#0A0E1A" />
+              </g>
             </svg>
 
-            <div className="w-full max-w-md mt-4 space-y-3">
-              <input
-                type="text"
-                value={premio}
-                onChange={(e) => setPremio(e.target.value)}
-                placeholder="Premio de este giro (opcional)"
-                disabled={spinning}
-                className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-gray-100 placeholder-gray-500"
-              />
+            {/* Controles */}
+            <div className={`w-full mt-4 space-y-3 ${pantallaCompleta ? 'max-w-[60vh]' : 'max-w-md'}`}>
+              {!pantallaCompleta && (
+                <input
+                  type="text"
+                  value={premio}
+                  onChange={(e) => setPremio(e.target.value)}
+                  placeholder="Premio de este giro (opcional)"
+                  disabled={spinning}
+                  className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-gray-100 placeholder-gray-500"
+                />
+              )}
               <button
                 onClick={handleSpin}
                 disabled={spinning || elegibles < 1}
-                className="w-full py-3.5 bg-[#1F9D73] hover:bg-[#24B382] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg"
+                className={`w-full bg-gradient-to-b from-[#F5B942] to-[#D9962A] hover:from-[#FFC857] hover:to-[#E5A23A] disabled:opacity-40 disabled:cursor-not-allowed text-[#0A0E1A] rounded-xl font-black shadow-lg shadow-[#F5B942]/20 transition ${
+                  pantallaCompleta ? 'py-[1.6vh] text-[3vh]' : 'py-3.5 text-lg'
+                }`}
               >
-                {spinning ? 'Girando…' : elegibles < 1 ? 'Sin participantes elegibles' : 'Elegir ganador'}
+                {spinning ? 'Girando…' : elegibles < 1 ? 'Sin participantes elegibles' : '¡Girar ruleta!'}
               </button>
-              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={soloAsistentes}
-                  onChange={(e) => setSoloAsistentes(e.target.checked)}
-                  disabled={spinning}
-                />
-                Solo participantes con asistencia marcada
-              </label>
+
+              <div className="flex items-center justify-between gap-3 text-sm text-gray-400">
+                {!pantallaCompleta ? (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soloAsistentes}
+                      onChange={(e) => setSoloAsistentes(e.target.checked)}
+                      disabled={spinning}
+                    />
+                    Solo participantes con asistencia marcada
+                  </label>
+                ) : (
+                  <span className="text-[1.8vh]">{elegibles} participantes en la ruleta · barra espaciadora para girar</span>
+                )}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSonido((s) => !s)}
+                    aria-label={sonido ? 'Silenciar' : 'Activar sonido'}
+                    title={sonido ? 'Silenciar' : 'Activar sonido'}
+                    className="p-2 rounded-lg hover:bg-white/[0.08] text-gray-300"
+                  >
+                    {sonido ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  </button>
+                  {pantallaCompleta && (
+                    <button
+                      onClick={toggleFullscreen}
+                      aria-label="Salir de pantalla completa"
+                      className="p-2 rounded-lg hover:bg-white/[0.08] text-gray-300"
+                    >
+                      <Minimize2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Últimos ganadores */}
+            {ultimosGanadores.length > 0 && (
+              <div className="mt-3 flex flex-wrap justify-center gap-2 max-w-full">
+                {ultimosGanadores.map((g) => (
+                  <span
+                    key={g.id}
+                    className={`px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-gray-200 ${
+                      pantallaCompleta ? 'text-[1.8vh]' : 'text-xs'
+                    }`}
+                  >
+                    <span className="text-[#F5B942] font-bold">#{g.numero_ganador}</span> {nombreCorto(g.nombre)}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Ganador (dentro del escenario para que también se vea en pantalla completa) */}
+            {winner && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Ganador"
+                className="absolute inset-0 z-20 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+              >
+                <div className="rifa-ganador w-full max-w-lg bg-gradient-to-b from-[#16204a] to-[#0D1326] border-2 border-[#F5B942]/60 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-[#F5B942]/20">
+                  <Trophy className={`mx-auto mb-3 text-[#F5B942] ${pantallaCompleta ? 'w-[9vh] h-[9vh]' : 'w-12 h-12'}`} />
+                  <p className={`text-[#F5B942] font-bold uppercase tracking-widest ${pantallaCompleta ? 'text-[2.6vh]' : 'text-base'}`}>
+                    Ganador #{winner.numero_ganador}
+                  </p>
+                  <h2 className={`mt-2 font-black text-gray-50 break-words leading-tight ${pantallaCompleta ? 'text-[6vh]' : 'text-3xl sm:text-4xl'}`}>
+                    {formatoNombre(winner.nombre)}
+                  </h2>
+                  <p className={`mt-3 text-gray-300 ${pantallaCompleta ? 'text-[2.6vh]' : ''}`}>
+                    Número de participante <span className="font-bold text-gray-50">{winner.numero_asignado}</span>
+                  </p>
+                  {winner.premio && (
+                    <p className={`mt-2 inline-block px-4 py-1 rounded-full bg-[#F5B942]/15 text-[#F5B942] font-semibold ${pantallaCompleta ? 'text-[2.4vh]' : ''}`}>
+                      {winner.premio}
+                    </p>
+                  )}
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={handleAusente}
+                      className="flex-1 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 rounded-xl font-medium"
+                    >
+                      No está presente
+                    </button>
+                    <button
+                      onClick={closeModal}
+                      autoFocus
+                      className="flex-1 py-2.5 bg-[#1F9D73] hover:bg-[#24B382] text-white rounded-xl font-bold"
+                    >
+                      Aceptar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <canvas ref={confetiRef} className="pointer-events-none absolute inset-0 z-30 h-full w-full" />
           </div>
 
           {/* Registro de ganadores */}
@@ -411,7 +765,7 @@ const RifaView = ({ onBack }) => {
               </button>
             </div>
 
-            <div className="divide-y divide-white/[0.06] overflow-y-auto max-h-[70vh]">
+            <div className="flex-1 divide-y divide-white/[0.06] overflow-y-auto max-h-[60vh]">
               {ganadoresFiltrados.length === 0 ? (
                 <p className="p-8 text-center text-sm text-gray-500">
                   {ganadores.length === 0 ? 'Aún no hay ganadores. Gira la ruleta para empezar.' : 'Sin coincidencias.'}
@@ -423,7 +777,7 @@ const RifaView = ({ onBack }) => {
                       #{g.numero_ganador}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-100 truncate">{g.nombre}</p>
+                      <p className="font-medium text-gray-100 truncate">{formatoNombre(g.nombre)}</p>
                       <p className="text-xs text-gray-500">
                         N.º {g.numero_asignado} · {g.telefono}
                         {g.premio ? ` · ${g.premio}` : ''}
@@ -454,41 +808,90 @@ const RifaView = ({ onBack }) => {
                 ))
               )}
             </div>
+
+            {/* Registros de prueba y reinicio */}
+            <div className="border-t border-white/10 p-4 space-y-3 text-sm">
+              <button
+                onClick={toggleExcluidos}
+                className="flex items-center gap-2 text-gray-400 hover:text-gray-200"
+              >
+                <FlaskConical className="w-4 h-4" />
+                {excluidosPrueba} registros de prueba excluidos de la rifa
+                <span className="underline">{listaExcluidos ? 'ocultar' : 'ver'}</span>
+              </button>
+              {listaExcluidos && (
+                <ul className="max-h-40 overflow-y-auto rounded-xl bg-black/20 border border-white/10 p-3 text-xs text-gray-400 space-y-1">
+                  {listaExcluidos.length === 0 && <li>Ninguno</li>}
+                  {listaExcluidos.map((x, i) => (
+                    <li key={i}>
+                      <span className="text-gray-500">{x.numero_asignado}</span> · {x.nombre}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {reinicio ? (
+                <form onSubmit={handleReiniciar} className="rounded-xl border border-[#C94B45]/40 bg-[#C94B45]/10 p-3 space-y-2">
+                  <p className="text-red-100">
+                    Se borrarán los {ganadores.length} ganadores registrados y todos volverán a participar.
+                    La asistencia no se modifica. Escribe <b>REINICIAR</b> para confirmar.
+                  </p>
+                  <input
+                    type="text"
+                    value={reinicio.texto}
+                    onChange={(e) => setReinicio((r) => ({ ...r, texto: e.target.value }))}
+                    autoFocus
+                    className="w-full px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-gray-100"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReinicio(null)}
+                      className="flex-1 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 rounded-lg"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={reinicio.texto.trim().toUpperCase() !== 'REINICIAR' || reinicio.enviando}
+                      className="flex-1 py-2 bg-[#C94B45] hover:bg-[#D85A54] disabled:opacity-40 text-white rounded-lg font-semibold"
+                    >
+                      {reinicio.enviando ? 'Reiniciando…' : 'Reiniciar rifa'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setReinicio({ texto: '', enviando: false })}
+                  disabled={spinning}
+                  className="flex items-center gap-2 text-red-300/80 hover:text-red-200 disabled:opacity-40"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reiniciar rifa (nadie ha ganado)
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Ganador */}
-      {winner && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Ganador"
-          className="fixed inset-0 z-[60] bg-black/75 flex items-center justify-center p-4"
-        >
-          <div className="w-full max-w-md bg-[#0D1326] border border-[#F5B942]/40 rounded-2xl p-6 sm:p-8 text-center">
-            <Trophy className="w-10 h-10 mx-auto mb-3 text-[#F5B942]" />
-            <p className="text-[#F5B942] font-bold text-lg">Ganador #{winner.numero_ganador}</p>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-black text-gray-50 break-words">{winner.nombre}</h2>
-            <p className="mt-2 text-gray-400">Número de participante {winner.numero_asignado}</p>
-            {winner.premio && <p className="mt-1 text-gray-300">Premio: {winner.premio}</p>}
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleAusente}
-                className="flex-1 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 rounded-xl font-medium"
-              >
-                No está presente
-              </button>
-              <button
-                onClick={closeModal}
-                className="flex-1 py-2.5 bg-[#1F9D73] hover:bg-[#24B382] text-white rounded-xl font-bold"
-              >
-                Aceptar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <style>{`
+        .rifa-foco { fill: #FFF7D6; opacity: 0.95; animation: rifa-foco 1.2s ease-in-out infinite; }
+        .rifa-foco-b { animation-delay: -0.6s; }
+        .rifa-girando .rifa-foco { animation-duration: 0.25s; }
+        @keyframes rifa-foco {
+          0%, 100% { opacity: 1; fill: #FFF7D6; }
+          50% { opacity: 0.35; fill: #F5B942; }
+        }
+        .rifa-ganador { animation: rifa-ganador 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes rifa-ganador {
+          from { transform: scale(0.7); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .rifa-foco, .rifa-ganador { animation: none; }
+        }
+      `}</style>
     </div>
   );
 };

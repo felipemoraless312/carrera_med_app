@@ -768,27 +768,90 @@ class GanadorUpdate(BaseModel):
     premio: Optional[str] = None
 
 
+class ReiniciarRequest(BaseModel):
+    confirmacion: str
+
+
 def verificar_pin(x_rifa_pin: Optional[str] = Header(None)):
     if not RIFA_PIN or not x_rifa_pin or not secrets.compare_digest(x_rifa_pin, RIFA_PIN):
         raise HTTPException(status_code=401, detail="PIN inválido")
 
 
+# Registros de prueba que no deben entrar a la rifa (nombres tipo "test", "prueba 14", "hola", correos de ejemplo)
+_PRUEBA_NOMBRE = re.compile(r"\b(test(s|ing)?\d*|pruebas?\d*|demo\d*|ejemplos?\d*|ho+la\d*|hola ?mundo|asdf\w*|qwert\w*|fake|dummy)\b")
+_PRUEBA_CORREO = re.compile(r"(^|[^a-z])(test|prueba|ejemplo|example|fake|dummy)s?\d*([^a-z]|$)|^ho+la\d*@")
+
+
+def _sin_acentos(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto.lower()) if unicodedata.category(c) != "Mn")
+
+
+def es_registro_prueba(nombre: Optional[str], correo: Optional[str]) -> int:
+    if nombre and _PRUEBA_NOMBRE.search(_sin_acentos(nombre)):
+        return 1
+    if correo and _PRUEBA_CORREO.search(correo.strip().lower()):
+        return 1
+    return 0
+
+
+def conectar_bd_rifa():
+    con = conectar_bd()
+    con.create_function("es_prueba", 2, es_registro_prueba, deterministic=True)
+    return con
+
+
 def _filtro_elegibles(solo_asistentes: bool) -> str:
-    base = "FROM participantes WHERE id NOT IN (SELECT participante_id FROM ganadores)"
+    base = ("FROM participantes WHERE id NOT IN (SELECT participante_id FROM ganadores)"
+            " AND NOT es_prueba(nombre, correo)")
     return base + (" AND asistio = 1" if solo_asistentes else "")
 
 
 @app.get("/api/rifa/elegibles", dependencies=[Depends(verificar_pin)])
 async def rifa_elegibles(solo_asistentes: bool = True, muestra: int = 24):
     """Total de elegibles + muestra aleatoria de nombres para dibujar la ruleta"""
-    con = conectar_bd()
+    con = conectar_bd_rifa()
     try:
         cur = con.cursor()
         base = _filtro_elegibles(solo_asistentes)
         cur.execute(f"SELECT COUNT(*) {base}")
         total = cur.fetchone()[0]
         cur.execute(f"SELECT nombre {base} ORDER BY RANDOM() LIMIT ?", (max(1, min(muestra, 40)),))
-        return {"total": total, "muestra": [{"nombre": r[0]} for r in cur.fetchall()]}
+        muestra_nombres = [{"nombre": r[0]} for r in cur.fetchall()]
+        cur.execute("SELECT COUNT(*) FROM participantes WHERE es_prueba(nombre, correo)")
+        excluidos = cur.fetchone()[0]
+        return {"total": total, "muestra": muestra_nombres, "excluidos_prueba": excluidos}
+    finally:
+        con.close()
+
+
+@app.get("/api/rifa/excluidos", dependencies=[Depends(verificar_pin)])
+async def rifa_excluidos():
+    """Registros que la rifa ignora por parecer de prueba (para que el comité lo pueda revisar)"""
+    con = conectar_bd_rifa()
+    try:
+        cur = con.cursor()
+        cur.execute("""SELECT nombre, numero_asignado FROM participantes
+                       WHERE es_prueba(nombre, correo) ORDER BY id""")
+        return {"excluidos": [{"nombre": r[0], "numero_asignado": r[1]} for r in cur.fetchall()]}
+    finally:
+        con.close()
+
+
+@app.post("/api/rifa/reiniciar", dependencies=[Depends(verificar_pin)])
+async def rifa_reiniciar(data: ReiniciarRequest):
+    """Borra todos los ganadores: todos vuelven a participar. No toca la asistencia."""
+    if data.confirmacion.strip().upper() != "REINICIAR":
+        raise HTTPException(status_code=400, detail="Escribe REINICIAR para confirmar")
+    con = conectar_bd()
+    try:
+        cur = con.cursor()
+        cur.execute("DELETE FROM ganadores")
+        borrados = cur.rowcount
+        con.commit()
+        return {"borrados": borrados, "message": "Rifa reiniciada"}
+    except Exception as e:
+        con.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al reiniciar la rifa: {str(e)}")
     finally:
         con.close()
 
@@ -796,7 +859,7 @@ async def rifa_elegibles(solo_asistentes: bool = True, muestra: int = 24):
 @app.post("/api/rifa/girar", dependencies=[Depends(verificar_pin)])
 async def rifa_girar(data: GirarRequest):
     """Elige y guarda un ganador (el sorteo real ocurre aquí, no en el navegador)"""
-    con = conectar_bd()
+    con = conectar_bd_rifa()
     try:
         con.execute("BEGIN IMMEDIATE")  # bloquea escrituras concurrentes durante el sorteo
         cur = con.cursor()
