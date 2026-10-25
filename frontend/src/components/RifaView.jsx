@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import {
   ArrowLeft, Maximize2, Minimize2, Lock, Search, RefreshCw, Trophy, Volume2, VolumeX, RotateCcw, FlaskConical,
 } from 'lucide-react';
@@ -22,19 +22,18 @@ const sliceColor = (i, total) => {
   if (i === total - 1 && total > 1 && idx === 0) return COLORS[2];
   return COLORS[idx];
 };
-const IDLE_SPEED = 5;     // °/s cuando está en reposo (giro lento)
+const IDLE_SPEED = 6;     // °/s cuando está en reposo (giro lento)
+// Casillas visibles a la vez; si hay más participantes, los nombres se van turnando
+// al pasar por la parte de abajo, así todos aparecen en la ruleta
+const MAX_CASILLAS = 36;
 // Velocidad máxima: por debajo de media casilla por cuadro para que no parpadee ni parezca girar al revés
 const FAST_SPEED = 400;   // °/s
-const IMPULSO_MS = 380;   // retroceso breve antes de arrancar, como cuando se jala la ruleta
-const IMPULSO_GRADOS = 14;
 const ACELERACION_MS = 1100;
 const FRENADA_MS = 6500;  // duración aproximada de la frenada
 const FRENADA_POT = 2.2;  // curva de frenado: la ruleta pierde velocidad de forma pareja, sin arrastrarse al final
-const REBOTE_CASILLAS = 0.07; // se pasa un poco y regresa al detenerse
-const REBOTE_MS = 650;
 const PAUSA_GANADOR_MS = 1300; // se resalta la casilla antes de mostrar al ganador
 // Flecha: los clavos de cada casilla la empujan y regresa como resorte
-const FLECHA_MAX = 26;    // grados de desvío máximo
+const FLECHA_MAX = 18;    // grados de desvío máximo
 const FLECHA_CONTACTO = 0.16; // fracción de la casilla en la que el clavo toca la flecha
 const RESORTE_K = 900;
 const RESORTE_AMORT = 20;
@@ -100,7 +99,6 @@ const crearSonidos = () => {
       ultimoTick = ctx.currentTime;
       nota(1500, 0, 0.03, 'square', 0.05);
     },
-    impulso: () => nota(180, 0, 0.25, 'sine', 0.2),
     fanfarria: () => {
       [523.25, 659.25, 783.99].forEach((f, i) => nota(f, i * 0.13, 0.22));
       nota(1046.5, 0.39, 0.7, 'triangle', 0.22);
@@ -173,7 +171,8 @@ const RifaView = ({ onBack }) => {
 
   const [soloAsistentes, setSoloAsistentes] = useState(true);
   const [premio, setPremio] = useState('');
-  const [slots, setSlots] = useState([]);
+  const [slots, setSlots] = useState([]);   // nombres con los que se dibujan las casillas
+  const [todos, setTodos] = useState([]);   // todos los elegibles, para la franja de nombres
   const [elegibles, setElegibles] = useState(0);
   const [excluidosPrueba, setExcluidosPrueba] = useState(0);
   const [listaExcluidos, setListaExcluidos] = useState(null);
@@ -193,12 +192,19 @@ const RifaView = ({ onBack }) => {
   const confetiRef = useRef(null);
   const angleRef = useRef(0);
   const speedRef = useRef(IDLE_SPEED);
-  const phaseRef = useRef('idle'); // idle | windup | accel | decel | settle
+  const phaseRef = useRef('idle'); // idle | accel | decel
   const phaseStartRef = useRef(0);
   const decelRef = useRef(null);
   const flechaRef = useRef({ angulo: 0, vel: 0 }); // resorte de la flecha
   const sliceRef = useRef(-1);
   const pausaRef = useRef(null);
+  const textosRef = useRef([]);     // <text> de cada casilla, se cambian sin re-render
+  const nombresRef = useRef([]);    // nombre que muestra cada casilla ahora mismo
+  const poolRef = useRef([]);       // todos los elegibles en orden aleatorio
+  const cursorRef = useRef(0);      // siguiente nombre del pool que entra a la ruleta
+  const abajoRef = useRef(-1);      // casilla que está pasando por abajo
+  const protegidaRef = useRef(-1);  // casilla del ganador: no se cambia mientras frena
+  const detenidaRef = useRef(false); // quieta mientras se anuncia al ganador
   const segRef = useRef(360);
   const sonidosRef = useRef(null);
   const sonidoRef = useRef(true);
@@ -209,6 +215,16 @@ const RifaView = ({ onBack }) => {
 
   useEffect(() => { sonidoRef.current = sonido; }, [sonido]);
   useEffect(() => { segRef.current = 360 / Math.max(slots.length, 1); }, [slots.length]);
+
+  // Los textos de las casillas se escriben directo en el SVG para poder turnarlos cada cuadro
+  useLayoutEffect(() => {
+    nombresRef.current = [...slots];
+    slots.forEach((nombre, i) => {
+      const t = textosRef.current[i];
+      if (t) t.textContent = nombreCorto(nombre);
+    });
+    abajoRef.current = -1;
+  }, [slots]);
 
   useEffect(() => {
     const onChange = () => setPantallaCompleta(document.fullscreenElement === stageRef.current);
@@ -233,10 +249,14 @@ const RifaView = ({ onBack }) => {
 
   const loadElegibles = useCallback(async () => {
     try {
-      const d = await call(`/elegibles?solo_asistentes=${soloAsistentes}&muestra=24`);
+      const d = await call(`/elegibles?solo_asistentes=${soloAsistentes}&muestra=5000`);
+      const nombres = d.muestra.map((m) => m.nombre);
       setElegibles(d.total);
       setExcluidosPrueba(d.excluidos_prueba ?? 0);
-      setSlots(d.muestra.map((m) => m.nombre));
+      poolRef.current = nombres;
+      cursorRef.current = nombres.length > MAX_CASILLAS ? MAX_CASILLAS : 0;
+      setTodos(nombres);
+      setSlots(nombres.slice(0, MAX_CASILLAS));
     } catch (e) {
       setError(e.message);
     }
@@ -294,38 +314,18 @@ const RifaView = ({ onBack }) => {
       const phase = phaseRef.current;
       const transcurrido = now - phaseStartRef.current;
 
+      // Siempre gira hacia el mismo lado: el ángulo solo aumenta
       if (phase === 'idle') {
-        if (!reducedMotion.current) angleRef.current += IDLE_SPEED * dt;
-      } else if (phase === 'windup') {
-        // Retrocede un poco y se suelta
-        const t = Math.min(transcurrido / IMPULSO_MS, 1);
-        angleRef.current = decelRef.current.from - IMPULSO_GRADOS * Math.sin((t * Math.PI) / 2);
-        if (t >= 1) {
-          phaseRef.current = 'accel';
-          phaseStartRef.current = now;
-          speedRef.current = 0;
-        }
+        if (!reducedMotion.current && !detenidaRef.current) angleRef.current += IDLE_SPEED * dt;
       } else if (phase === 'accel') {
         const t = Math.min(transcurrido / ACELERACION_MS, 1);
-        speedRef.current = FAST_SPEED * (1 - (1 - t) * (1 - t));
+        speedRef.current = IDLE_SPEED + (FAST_SPEED - IDLE_SPEED) * (1 - (1 - t) * (1 - t));
         angleRef.current += speedRef.current * dt;
       } else if (phase === 'decel') {
         // Arranca con la misma velocidad que traía, así no hay saltos
         const d = decelRef.current;
         const t = Math.min(transcurrido / d.duration, 1);
         angleRef.current = d.from + d.delta * (1 - Math.pow(1 - t, FRENADA_POT));
-        if (t >= 1) {
-          phaseRef.current = d.rebote > 0 ? 'settle' : 'idle';
-          phaseStartRef.current = now;
-          d.finFrenada = angleRef.current;
-          if (d.rebote <= 0) d.onEnd();
-        }
-      } else if (phase === 'settle') {
-        // Se pasó un poquito: regresa suave al centro de la casilla
-        const d = decelRef.current;
-        const t = Math.min(transcurrido / REBOTE_MS, 1);
-        const suave = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        angleRef.current = d.finFrenada - d.rebote * suave;
         if (t >= 1) {
           phaseRef.current = 'idle';
           d.onEnd();
@@ -338,11 +338,31 @@ const RifaView = ({ onBack }) => {
       const casilla = Math.floor(u);
       const avance = 1 - (u - casilla);
       const flecha = flechaRef.current;
-      const retrocede = phase === 'windup' || phase === 'settle';
+
+      // Cada casilla que pasa por abajo toma el siguiente nombre, así van saliendo todos
+      const pool = poolRef.current;
+      const nombres = nombresRef.current;
+      const total = nombres.length;
+      if (pool.length > total && total > 1) {
+        const abajo = Math.floor(((((180 - rot) % 360) + 360) % 360) / segRef.current);
+        const previa = abajoRef.current;
+        if (previa !== -1 && abajo !== previa) {
+          const pasaron = (previa - abajo + total) % total;
+          for (let p = 1; p <= pasaron; p += 1) {
+            const i = (previa - p + total) % total;
+            if (i === protegidaRef.current) continue;
+            nombres[i] = pool[cursorRef.current];
+            cursorRef.current = (cursorRef.current + 1) % pool.length;
+            const texto = textosRef.current[i];
+            if (texto) texto.textContent = nombreCorto(nombres[i]);
+          }
+        }
+        abajoRef.current = abajo;
+      }
 
       // Al pasar un clavo la flecha queda empujada al máximo y suena un clic
       if (casilla !== sliceRef.current) {
-        const adelante = sliceRef.current !== -1 && !retrocede;
+        const adelante = sliceRef.current !== -1;
         sliceRef.current = casilla;
         if (adelante) {
           flecha.angulo = Math.min(flecha.angulo, -FLECHA_MAX);
@@ -352,7 +372,7 @@ const RifaView = ({ onBack }) => {
       }
 
       // El clavo que se acerca empuja la flecha; al soltarla regresa como resorte
-      const empuje = !retrocede && avance > 1 - FLECHA_CONTACTO
+      const empuje = avance > 1 - FLECHA_CONTACTO
         ? -FLECHA_MAX * ((avance - (1 - FLECHA_CONTACTO)) / FLECHA_CONTACTO)
         : 0;
       const pasos = Math.ceil(dt / 0.004);
@@ -389,11 +409,10 @@ const RifaView = ({ onBack }) => {
     setSpinning(true);
     setError('');
     setCasillaGanadora(null);
+    detenidaRef.current = false;
     if (!reducedMotion.current) {
-      decelRef.current = { from: angleRef.current };
       phaseStartRef.current = performance.now();
-      phaseRef.current = 'windup';
-      if (sonidoRef.current) sonidosRef.current?.impulso();
+      phaseRef.current = 'accel';
     }
 
     try {
@@ -410,28 +429,29 @@ const RifaView = ({ onBack }) => {
       const n = slots.length;
       const seg = 360 / n;
       const k = Math.floor(Math.random() * n);
-      setSlots((prev) => prev.map((s, i) => (i === k ? g.nombre : s)));
+      nombresRef.current[k] = g.nombre;
+      protegidaRef.current = k;
+      if (textosRef.current[k]) textosRef.current[k].textContent = nombreCorto(g.nombre);
 
       // Lejos de los bordes para que no quede duda de en qué casilla cayó
       const jitter = (Math.random() - 0.5) * seg * 0.5;
       const target = ((-((k + 0.5) * seg + jitter) % 360) + 360) % 360;
       const from = angleRef.current;
       const adjust = (((target - from) % 360) + 360) % 360;
-      const rebote = reducedMotion.current ? 0 : REBOTE_CASILLAS * seg;
 
       // Vueltas y duración calculadas para que la frenada empiece a la velocidad que lleva
       const v0 = Math.max(speedRef.current, 150);
       const ideal = (v0 * FRENADA_MS) / 1000 / FRENADA_POT;
-      const vueltas = Math.max(1, Math.round((ideal - adjust - rebote) / 360));
-      const delta = 360 * vueltas + adjust + rebote;
+      const vueltas = Math.max(1, Math.round((ideal - adjust) / 360));
+      const delta = 360 * vueltas + adjust;
 
       decelRef.current = {
         from,
         delta,
-        rebote,
         duration: reducedMotion.current ? 1500 : (FRENADA_POT * delta * 1000) / v0,
         onEnd: () => {
           speedRef.current = IDLE_SPEED;
+          detenidaRef.current = true;
           setCasillaGanadora(k);
           pausaRef.current = setTimeout(() => {
             setWinner(g);
@@ -445,6 +465,7 @@ const RifaView = ({ onBack }) => {
       phaseRef.current = 'decel';
     } catch (err) {
       phaseRef.current = 'idle';
+      protegidaRef.current = -1;
       speedRef.current = IDLE_SPEED;
       setError(err.message);
       setSpinning(false);
@@ -479,6 +500,8 @@ const RifaView = ({ onBack }) => {
   const closeModal = () => {
     setWinner(null);
     setCasillaGanadora(null);
+    protegidaRef.current = -1;
+    detenidaRef.current = false;
     loadElegibles();
   };
 
@@ -630,7 +653,7 @@ const RifaView = ({ onBack }) => {
             <svg
               viewBox={`0 0 ${SIZE} ${SIZE}`}
               className={`w-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)] ${
-                pantallaCompleta ? 'max-w-[min(90vw,62vh)]' : 'max-w-[min(90vw,64vh,560px)]'
+                pantallaCompleta ? 'max-w-[min(90vw,56vh)]' : 'max-w-[min(90vw,64vh,560px)]'
               } ${spinning ? 'rifa-girando' : ''}`}
               role="img"
               aria-label="Ruleta de participantes"
@@ -663,7 +686,7 @@ const RifaView = ({ onBack }) => {
                 {slots.length < 2 ? (
                   <circle cx={C} cy={C} r={R} fill={COLORS[0]} />
                 ) : (
-                  slots.map((name, i) => (
+                  slots.map((_, i) => (
                     <g
                       key={i}
                       className="rifa-casilla"
@@ -684,9 +707,8 @@ const RifaView = ({ onBack }) => {
                         fontSize={fontSize}
                         fontWeight="700"
                         fill={SLICE_TEXT}
-                      >
-                        {nombreCorto(name)}
-                      </text>
+                        ref={(el) => { textosRef.current[i] = el; }}
+                      />
                     </g>
                   ))
                 )}
@@ -798,6 +820,33 @@ const RifaView = ({ onBack }) => {
                     <span className="text-[#F5B942] font-bold">#{g.numero_ganador}</span> {nombreCorto(g.nombre)}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* Todos los participantes pasan en una franja para que cada quien vea su nombre */}
+            {todos.length > 0 && (
+              <div className="relative mt-4 w-full overflow-hidden">
+                <p className={`mb-1 text-center text-blue-200 ${pantallaCompleta ? 'text-[1.8vh]' : 'text-xs'}`}>
+                  Participan {todos.length} personas
+                </p>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-12 bg-gradient-to-r from-[#0A0E1A] to-transparent" />
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-12 bg-gradient-to-l from-[#0A0E1A] to-transparent" />
+                <div
+                  className="rifa-franja flex w-max"
+                  style={{ animationDuration: `${Math.max(30, todos.length * 2)}s` }}
+                >
+                  {[...todos, ...todos].map((nombre, i) => (
+                    <span
+                      key={i}
+                      className={`flex items-center gap-3 whitespace-nowrap px-3 font-semibold text-gray-200 ${
+                        pantallaCompleta ? 'text-[2.2vh]' : 'text-sm'
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#F5B942]" />
+                      {formatoNombre(nombre)}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -991,6 +1040,11 @@ const RifaView = ({ onBack }) => {
         @keyframes rifa-casilla {
           from { stroke: #F5B942; stroke-opacity: 1; }
           to { stroke: #FFFFFF; stroke-opacity: 0.6; }
+        }
+        .rifa-franja { will-change: transform; animation: rifa-franja linear infinite; }
+        @keyframes rifa-franja {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
         }
         .rifa-ganador { animation: rifa-ganador 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes rifa-ganador {

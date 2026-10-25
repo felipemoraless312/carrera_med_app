@@ -808,14 +808,14 @@ def _filtro_elegibles(solo_asistentes: bool) -> str:
 
 @app.get("/api/rifa/elegibles", dependencies=[Depends(verificar_pin)])
 async def rifa_elegibles(solo_asistentes: bool = True, muestra: int = 24):
-    """Total de elegibles + muestra aleatoria de nombres para dibujar la ruleta"""
+    """Total de elegibles + nombres en orden aleatorio para dibujar la ruleta (todos, para que nadie quede fuera)"""
     con = conectar_bd_rifa()
     try:
         cur = con.cursor()
         base = _filtro_elegibles(solo_asistentes)
         cur.execute(f"SELECT COUNT(*) {base}")
         total = cur.fetchone()[0]
-        cur.execute(f"SELECT nombre {base} ORDER BY RANDOM() LIMIT ?", (max(1, min(muestra, 40)),))
+        cur.execute(f"SELECT nombre {base} ORDER BY RANDOM() LIMIT ?", (max(1, min(muestra, 5000)),))
         muestra_nombres = [{"nombre": r[0]} for r in cur.fetchall()]
         cur.execute("SELECT COUNT(*) FROM participantes WHERE es_prueba(nombre, correo)")
         excluidos = cur.fetchone()[0]
