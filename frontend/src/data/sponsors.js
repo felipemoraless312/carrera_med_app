@@ -2,14 +2,12 @@
 // Los de circular: true ya vienen recortados en /images/patrocinadores/circulares; el resto está en /images/patrocinadores/logos
 export const SPONSORS = [
   { name: 'Universidad Politécnica de Chiapas', image: '/images/patrocinadores/logos/universidad-politecnica.webp' },
-  { name: 'HD (Hematology Diagnostic)', image: '/images/patrocinadores/logos/hd.jpg' },
   { name: 'HOSCEM: Hospital y centro Médico San Cristobal de las Casas', image: '/images/patrocinadores/circulares/hoscem.webp', circular: true },
   { name: 'Instituto del Deporte de Chiapas', image: '/images/patrocinadores/circulares/instituto-del-deporte.webp', circular: true },
   { name: 'Ayuntamiento de Tuxtla Gutiérrez', image: '/images/patrocinadores/circulares/tuxtla-gutierrez.webp', circular: true },
   { name: 'Dr. Francisco Ramos Narváez', image: '/images/patrocinadores/logos/dr-ramos-narvaez.jpeg' },
   { name: 'One More International México', image: '/images/patrocinadores/circulares/one-more-international.webp', circular: true },
   { name: 'El Precio de la Historia', image: '/images/patrocinadores/circulares/el-precio-de-la-historia.webp', circular: true },
-  { name: 'La Escuelita', image: '/images/patrocinadores/logos/la-escuelita.jpeg' },
   { name: 'VIM Active Wear', image: '/images/patrocinadores/logos/vim-active-wear.jpeg' },
   { name: 'Yves Rocher', image: '/images/patrocinadores/logos/yves-rocher.jpeg' },
   { name: 'Conse-Frut Linaloe', image: '/images/patrocinadores/circulares/linaloe.webp', circular: true },
