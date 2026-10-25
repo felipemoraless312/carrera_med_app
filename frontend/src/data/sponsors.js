@@ -50,6 +50,6 @@ export const SPONSORS = [
   { name: 'Laboratorios Liomont', image: '/images/patrocinadores/logos/liomont.webp' },
   { name: 'Fundación Toledo A.C.', image: '/images/patrocinadores/logos/fundacion-toledo.webp' },
   { name: 'Secretaría de Salud de Chiapas', image: '/images/patrocinadores/logos/salud-chiapas.webp' },
-  { name: 'Laboratorio Médico del Chopo', image: '/images/patrocinadores/circulares/chopo.webp', circular: true },
+  { name: 'Chopo', image: '/images/patrocinadores/circulares/chopo.webp', circular: true },
   { name: 'Cruz Roja Mexicana Delegación Chiapas', image: '/images/patrocinadores/logos/cruz-roja.webp' }
 ];
