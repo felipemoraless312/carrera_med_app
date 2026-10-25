@@ -22,4 +22,6 @@ export const DESARROLLADORES = [
 ];
 
 // Fotos grupales del comité (en /images/comite)
-export const FOTOS_COMITE = ['comite3.jpg', 'comite.jpg', 'comite2.jpg', 'comite4.jpeg'];
+export const FOTOS_COMITE = [
+  'comite3.jpg', 'comite.jpg', 'carrera5.jpeg', 'comite2.jpg', 'comite4.jpeg', 'comite5.jpeg', 'carrera.jpeg',
+];

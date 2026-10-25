@@ -781,12 +781,17 @@ def verificar_pin(x_rifa_pin: Optional[str] = Header(None)):
 _PRUEBA_NOMBRE = re.compile(r"\b(test(s|ing)?\d*|pruebas?\d*|demo\d*|ejemplos?\d*|ho+la\d*|hola ?mundo|asdf\w*|qwert\w*|fake|dummy)\b")
 _PRUEBA_CORREO = re.compile(r"(^|[^a-z])(test|prueba|ejemplo|example|fake|dummy)s?\d*([^a-z]|$)|^ho+la\d*@")
 
+# Participantes reales que el filtro marcaba como prueba (revisados por el comité)
+_NO_SON_PRUEBA = {"0955", "1829", "1850", "1999"}
+
 
 def _sin_acentos(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", texto.lower()) if unicodedata.category(c) != "Mn")
 
 
-def es_registro_prueba(nombre: Optional[str], correo: Optional[str]) -> int:
+def es_registro_prueba(nombre: Optional[str], correo: Optional[str], numero: Optional[str] = None) -> int:
+    if numero and numero.strip() in _NO_SON_PRUEBA:
+        return 0
     if nombre and _PRUEBA_NOMBRE.search(_sin_acentos(nombre)):
         return 1
     if correo and _PRUEBA_CORREO.search(correo.strip().lower()):
@@ -796,13 +801,13 @@ def es_registro_prueba(nombre: Optional[str], correo: Optional[str]) -> int:
 
 def conectar_bd_rifa():
     con = conectar_bd()
-    con.create_function("es_prueba", 2, es_registro_prueba, deterministic=True)
+    con.create_function("es_prueba", 3, es_registro_prueba, deterministic=True)
     return con
 
 
 def _filtro_elegibles(solo_asistentes: bool) -> str:
     base = ("FROM participantes WHERE id NOT IN (SELECT participante_id FROM ganadores)"
-            " AND NOT es_prueba(nombre, correo)")
+            " AND NOT es_prueba(nombre, correo, numero_asignado)")
     return base + (" AND asistio = 1" if solo_asistentes else "")
 
 
@@ -817,7 +822,7 @@ async def rifa_elegibles(solo_asistentes: bool = True, muestra: int = 24):
         total = cur.fetchone()[0]
         cur.execute(f"SELECT nombre {base} ORDER BY RANDOM() LIMIT ?", (max(1, min(muestra, 5000)),))
         muestra_nombres = [{"nombre": r[0]} for r in cur.fetchall()]
-        cur.execute("SELECT COUNT(*) FROM participantes WHERE es_prueba(nombre, correo)")
+        cur.execute("SELECT COUNT(*) FROM participantes WHERE es_prueba(nombre, correo, numero_asignado)")
         excluidos = cur.fetchone()[0]
         return {"total": total, "muestra": muestra_nombres, "excluidos_prueba": excluidos}
     finally:
@@ -831,7 +836,7 @@ async def rifa_excluidos():
     try:
         cur = con.cursor()
         cur.execute("""SELECT nombre, numero_asignado FROM participantes
-                       WHERE es_prueba(nombre, correo) ORDER BY id""")
+                       WHERE es_prueba(nombre, correo, numero_asignado) ORDER BY id""")
         return {"excluidos": [{"nombre": r[0], "numero_asignado": r[1]} for r in cur.fetchall()]}
     finally:
         con.close()
