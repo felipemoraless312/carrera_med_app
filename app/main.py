@@ -7,7 +7,7 @@ import sqlite3
 import os
 import re
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 import tempfile
@@ -761,6 +761,7 @@ async def actualizar_asistencia_masiva(data: AsistenciaBulkUpdate):
 class GirarRequest(BaseModel):
     solo_asistentes: bool = True
     premio: Optional[str] = None
+    cantidad: int = Field(1, ge=1, le=20)  # ganadores por giro
 
 
 class GanadorUpdate(BaseModel):
@@ -863,7 +864,7 @@ async def rifa_reiniciar(data: ReiniciarRequest):
 
 @app.post("/api/rifa/girar", dependencies=[Depends(verificar_pin)])
 async def rifa_girar(data: GirarRequest):
-    """Elige y guarda un ganador (el sorteo real ocurre aquí, no en el navegador)"""
+    """Elige y guarda los ganadores del giro (el sorteo real ocurre aquí, no en el navegador)"""
     con = conectar_bd_rifa()
     try:
         con.execute("BEGIN IMMEDIATE")  # bloquea escrituras concurrentes durante el sorteo
@@ -873,25 +874,28 @@ async def rifa_girar(data: GirarRequest):
         if not elegibles:
             raise HTTPException(status_code=400, detail="No quedan participantes elegibles")
 
-        pid, nombre, numero = secrets.choice(elegibles)
+        elegidos = secrets.SystemRandom().sample(elegibles, min(data.cantidad, len(elegibles)))
         cur.execute("SELECT COALESCE(MAX(numero_ganador), 0) + 1 FROM ganadores")
-        numero_ganador = cur.fetchone()[0]
+        siguiente = cur.fetchone()[0]
         premio = data.premio.strip() if data.premio and data.premio.strip() else None
 
-        cur.execute(
-            "INSERT INTO ganadores (numero_ganador, participante_id, premio) VALUES (?, ?, ?)",
-            (numero_ganador, pid, premio),
-        )
-        ganador_id = cur.lastrowid
+        ganadores = []
+        for i, (pid, nombre, numero) in enumerate(elegidos):
+            cur.execute(
+                "INSERT INTO ganadores (numero_ganador, participante_id, premio) VALUES (?, ?, ?)",
+                (siguiente + i, pid, premio),
+            )
+            ganadores.append({
+                "id": cur.lastrowid,
+                "numero_ganador": siguiente + i,
+                "participante_id": pid,
+                "nombre": nombre,
+                "numero_asignado": numero,
+                "premio": premio,
+            })
         con.commit()
-        return {
-            "id": ganador_id,
-            "numero_ganador": numero_ganador,
-            "participante_id": pid,
-            "nombre": nombre,
-            "numero_asignado": numero,
-            "premio": premio,
-        }
+        # El primero también va en la raíz para que los clientes de un solo ganador sigan funcionando
+        return {**ganadores[0], "ganadores": ganadores}
     except HTTPException:
         con.rollback()
         raise

@@ -179,12 +179,14 @@ const RifaView = ({ onBack }) => {
   const [ganadores, setGanadores] = useState([]);
   const [filtro, setFiltro] = useState('');
   const [spinning, setSpinning] = useState(false);
-  const [winner, setWinner] = useState(null);
+  const [winner, setWinner] = useState(null);   // ganadores del último giro (lista)
+  const [ausentes, setAusentes] = useState([]); // ids marcados como no presentes en este giro
+  const [porGiro, setPorGiro] = useState(5);   // ganadores por cada giro
   const [error, setError] = useState('');
   const [sonido, setSonido] = useState(true);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [reinicio, setReinicio] = useState(null); // null | { texto, enviando }
-  const [casillaGanadora, setCasillaGanadora] = useState(null);
+  const [casillasGanadoras, setCasillasGanadoras] = useState(null);
 
   const stageRef = useRef(null);
   const wheelRef = useRef(null);
@@ -203,7 +205,7 @@ const RifaView = ({ onBack }) => {
   const poolRef = useRef([]);       // todos los elegibles en orden aleatorio
   const cursorRef = useRef(0);      // siguiente nombre del pool que entra a la ruleta
   const abajoRef = useRef(-1);      // casilla que está pasando por abajo
-  const protegidaRef = useRef(-1);  // casilla del ganador: no se cambia mientras frena
+  const protegidasRef = useRef(new Set()); // casillas de los ganadores: no se cambian mientras frena
   const detenidaRef = useRef(false); // quieta mientras se anuncia al ganador
   const segRef = useRef(360);
   const sonidosRef = useRef(null);
@@ -350,7 +352,7 @@ const RifaView = ({ onBack }) => {
           const pasaron = (previa - abajo + total) % total;
           for (let p = 1; p <= pasaron; p += 1) {
             const i = (previa - p + total) % total;
-            if (i === protegidaRef.current) continue;
+            if (protegidasRef.current.has(i)) continue;
             nombres[i] = pool[cursorRef.current];
             cursorRef.current = (cursorRef.current + 1) % pool.length;
             const texto = textosRef.current[i];
@@ -408,7 +410,7 @@ const RifaView = ({ onBack }) => {
     sonidosRef.current?.reanudar();
     setSpinning(true);
     setError('');
-    setCasillaGanadora(null);
+    setCasillasGanadoras(null);
     detenidaRef.current = false;
     if (!reducedMotion.current) {
       phaseStartRef.current = performance.now();
@@ -420,18 +422,26 @@ const RifaView = ({ onBack }) => {
       const [g] = await Promise.all([
         call('/girar', {
           method: 'POST',
-          body: JSON.stringify({ solo_asistentes: soloAsistentes, premio: premio.trim() || null }),
+          body: JSON.stringify({ solo_asistentes: soloAsistentes, premio: premio.trim() || null, cantidad: porGiro }),
         }),
         new Promise((r) => setTimeout(r, reducedMotion.current ? 0 : 1200)),
       ]);
 
-      // Se coloca el nombre ganador en una casilla al azar y se frena sobre ella
+      // El primer ganador va en una casilla al azar (donde frena la flecha) y los demás
+      // repartidos alrededor de la ruleta; ninguna de esas casillas se cambia mientras frena
+      const lista = g.ganadores ?? [g];
       const n = slots.length;
       const seg = 360 / n;
       const k = Math.floor(Math.random() * n);
-      nombresRef.current[k] = g.nombre;
-      protegidaRef.current = k;
-      if (textosRef.current[k]) textosRef.current[k].textContent = nombreCorto(g.nombre);
+      const casillas = [];
+      lista.slice(0, n).forEach((ganador, j) => {
+        let c = (k + Math.round((j * n) / Math.min(lista.length, n))) % n;
+        while (casillas.includes(c)) c = (c + 1) % n;
+        casillas.push(c);
+        nombresRef.current[c] = ganador.nombre;
+        if (textosRef.current[c]) textosRef.current[c].textContent = nombreCorto(ganador.nombre);
+      });
+      protegidasRef.current = new Set(casillas);
 
       // Lejos de los bordes para que no quede duda de en qué casilla cayó
       const jitter = (Math.random() - 0.5) * seg * 0.5;
@@ -452,9 +462,9 @@ const RifaView = ({ onBack }) => {
         onEnd: () => {
           speedRef.current = IDLE_SPEED;
           detenidaRef.current = true;
-          setCasillaGanadora(k);
+          setCasillasGanadoras(casillas);
           pausaRef.current = setTimeout(() => {
-            setWinner(g);
+            setWinner(lista);
             setSpinning(false);
             if (sonidoRef.current) sonidosRef.current?.fanfarria();
             loadGanadores();
@@ -465,7 +475,7 @@ const RifaView = ({ onBack }) => {
       phaseRef.current = 'decel';
     } catch (err) {
       phaseRef.current = 'idle';
-      protegidaRef.current = -1;
+      protegidasRef.current = new Set();
       speedRef.current = IDLE_SPEED;
       setError(err.message);
       setSpinning(false);
@@ -499,15 +509,18 @@ const RifaView = ({ onBack }) => {
 
   const closeModal = () => {
     setWinner(null);
-    setCasillaGanadora(null);
-    protegidaRef.current = -1;
+    setAusentes([]);
+    setCasillasGanadoras(null);
+    protegidasRef.current = new Set();
     detenidaRef.current = false;
     loadElegibles();
   };
 
-  const handleAusente = async () => {
-    await updateGanador(winner.id, { estado: 'anulado' });
-    closeModal();
+  // Marca a un ganador del giro como no presente (su premio queda anulado)
+  const handleAusente = async (ganador) => {
+    await updateGanador(ganador.id, { estado: 'anulado' });
+    setAusentes((a) => [...a, ganador.id]);
+    if (winner.length === 1) closeModal();
   };
 
   const handleReiniciar = async (e) => {
@@ -641,6 +654,11 @@ const RifaView = ({ onBack }) => {
                   {EDICION} Carrera del Día del Médico
                 </p>
               </div>
+              <img
+                src="/images/patrocinadores/logos/universidad-politecnica.webp"
+                alt="Universidad Politécnica de Chiapas"
+                className={`rounded-full bg-white object-contain ring-2 ring-[#F5B942]/70 ${pantallaCompleta ? 'h-[9vh] w-[9vh]' : 'h-12 w-12'}`}
+              />
             </div>
             {premio.trim() && (
               <p className={`mb-2 px-4 py-1 rounded-full bg-[#F5B942]/15 border border-[#F5B942]/40 text-[#F5B942] font-semibold ${
@@ -690,7 +708,7 @@ const RifaView = ({ onBack }) => {
                     <g
                       key={i}
                       className="rifa-casilla"
-                      opacity={casillaGanadora !== null && casillaGanadora !== i ? 0.35 : 1}
+                      opacity={casillasGanadoras && !casillasGanadoras.includes(i) ? 0.35 : 1}
                     >
                       <path
                         d={slicePath(i * seg, (i + 1) * seg)}
@@ -713,16 +731,17 @@ const RifaView = ({ onBack }) => {
                   ))
                 )}
                 {/* Casilla ganadora resaltada mientras se anuncia */}
-                {casillaGanadora !== null && slots.length >= 2 && (
+                {casillasGanadoras && slots.length >= 2 && casillasGanadoras.map((c) => (
                   <path
-                    d={slicePath(casillaGanadora * seg, (casillaGanadora + 1) * seg)}
+                    key={c}
+                    d={slicePath(c * seg, (c + 1) * seg)}
                     fill="none"
                     stroke="#F5B942"
                     strokeWidth="6"
                     strokeLinejoin="round"
                     className="rifa-casilla-ganadora"
                   />
-                )}
+                ))}
               </g>
               <circle cx={C} cy={C} r={R} fill="url(#rifa-brillo)" pointerEvents="none" />
 
@@ -761,6 +780,27 @@ const RifaView = ({ onBack }) => {
                   className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-gray-100 placeholder-gray-500"
                 />
               )}
+              {!pantallaCompleta && (
+                <div className="flex items-center justify-between gap-3 text-sm text-gray-400">
+                  <span>Ganadores por giro</span>
+                  <div className="flex gap-1">
+                    {[1, 3, 5, 10].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setPorGiro(c)}
+                        disabled={spinning}
+                        className={`w-10 py-1.5 rounded-lg font-bold border ${
+                          porGiro === c
+                            ? 'bg-[#F5B942] text-[#0A0E1A] border-[#F5B942]'
+                            : 'bg-white/[0.04] text-gray-300 border-white/10 hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button
                 onClick={handleSpin}
                 disabled={spinning || elegibles < 1}
@@ -768,7 +808,7 @@ const RifaView = ({ onBack }) => {
                   pantallaCompleta ? 'py-[1.6vh] text-[3vh]' : 'py-3.5 text-lg'
                 }`}
               >
-                {spinning ? 'Girando…' : elegibles < 1 ? 'Sin participantes elegibles' : '¡Girar ruleta!'}
+                {spinning ? 'Girando…' : elegibles < 1 ? 'Sin participantes elegibles' : porGiro > 1 ? `¡Girar ruleta! (${porGiro} ganadores)` : '¡Girar ruleta!'}
               </button>
 
               <div className="flex items-center justify-between gap-3 text-sm text-gray-400">
@@ -855,32 +895,75 @@ const RifaView = ({ onBack }) => {
               <div
                 role="dialog"
                 aria-modal="true"
-                aria-label="Ganador"
+                aria-label={winner.length === 1 ? 'Ganador' : 'Ganadores'}
                 className="absolute inset-0 z-20 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
               >
-                <div className="rifa-ganador w-full max-w-lg bg-gradient-to-b from-[#16204a] to-[#0D1326] border-2 border-[#F5B942]/60 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-[#F5B942]/20">
-                  <Trophy className={`mx-auto mb-3 text-[#F5B942] ${pantallaCompleta ? 'w-[9vh] h-[9vh]' : 'w-12 h-12'}`} />
-                  <p className={`text-[#F5B942] font-bold uppercase tracking-widest ${pantallaCompleta ? 'text-[2.6vh]' : 'text-base'}`}>
-                    Ganador #{winner.numero_ganador}
-                  </p>
-                  <h2 className={`mt-2 font-black text-gray-50 break-words leading-tight ${pantallaCompleta ? 'text-[6vh]' : 'text-3xl sm:text-4xl'}`}>
-                    {formatoNombre(winner.nombre)}
-                  </h2>
-                  <p className={`mt-3 text-gray-300 ${pantallaCompleta ? 'text-[2.6vh]' : ''}`}>
-                    Número de participante <span className="font-bold text-gray-50">{winner.numero_asignado}</span>
-                  </p>
-                  {winner.premio && (
-                    <p className={`mt-2 inline-block px-4 py-1 rounded-full bg-[#F5B942]/15 text-[#F5B942] font-semibold ${pantallaCompleta ? 'text-[2.4vh]' : ''}`}>
-                      {winner.premio}
+                <div className={`rifa-ganador w-full ${winner.length === 1 ? 'max-w-lg' : 'max-w-2xl'} max-h-full overflow-y-auto bg-gradient-to-b from-[#16204a] to-[#0D1326] border-2 border-[#F5B942]/60 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-[#F5B942]/20`}>
+                  <Trophy className={`mx-auto mb-3 text-[#F5B942] ${pantallaCompleta ? 'w-[8vh] h-[8vh]' : 'w-12 h-12'}`} />
+                  {winner.length === 1 ? (
+                    <>
+                      <p className={`text-[#F5B942] font-bold uppercase tracking-widest ${pantallaCompleta ? 'text-[2.6vh]' : 'text-base'}`}>
+                        Ganador #{winner[0].numero_ganador}
+                      </p>
+                      <h2 className={`mt-2 font-black text-gray-50 break-words leading-tight ${pantallaCompleta ? 'text-[6vh]' : 'text-3xl sm:text-4xl'}`}>
+                        {formatoNombre(winner[0].nombre)}
+                      </h2>
+                      <p className={`mt-3 text-gray-300 ${pantallaCompleta ? 'text-[2.6vh]' : ''}`}>
+                        Número de participante <span className="font-bold text-gray-50">{winner[0].numero_asignado}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className={`font-black uppercase tracking-widest text-[#F5B942] ${pantallaCompleta ? 'text-[3.6vh]' : 'text-xl sm:text-2xl'}`}>
+                        ¡{winner.length} ganadores!
+                      </h2>
+                      <ul className="mt-4 space-y-2 text-left">
+                        {winner.map((g) => {
+                          const ausente = ausentes.includes(g.id);
+                          return (
+                            <li
+                              key={g.id}
+                              className={`flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 ${ausente ? 'opacity-40' : ''}`}
+                            >
+                              <span className={`flex-shrink-0 font-black text-[#F5B942] ${pantallaCompleta ? 'text-[2.6vh]' : 'text-base'}`}>
+                                #{g.numero_ganador}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className={`font-bold text-gray-50 leading-tight break-words ${ausente ? 'line-through' : ''} ${pantallaCompleta ? 'text-[3.2vh]' : 'text-lg'}`}>
+                                  {formatoNombre(g.nombre)}
+                                </p>
+                                <p className={`text-gray-400 ${pantallaCompleta ? 'text-[1.9vh]' : 'text-xs'}`}>
+                                  Participante {g.numero_asignado}
+                                </p>
+                              </div>
+                              {!ausente && (
+                                <button
+                                  onClick={() => handleAusente(g)}
+                                  className="flex-shrink-0 px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 rounded-lg text-xs"
+                                >
+                                  No está
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  )}
+                  {winner[0].premio && (
+                    <p className={`mt-3 inline-block px-4 py-1 rounded-full bg-[#F5B942]/15 text-[#F5B942] font-semibold ${pantallaCompleta ? 'text-[2.4vh]' : ''}`}>
+                      {winner[0].premio}
                     </p>
                   )}
                   <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={handleAusente}
-                      className="flex-1 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 rounded-xl font-medium"
-                    >
-                      No está presente
-                    </button>
+                    {winner.length === 1 && (
+                      <button
+                        onClick={() => handleAusente(winner[0])}
+                        className="flex-1 py-2.5 bg-white/[0.06] hover:bg-white/[0.1] text-gray-200 rounded-xl font-medium"
+                      >
+                        No está presente
+                      </button>
+                    )}
                     <button
                       onClick={closeModal}
                       autoFocus
