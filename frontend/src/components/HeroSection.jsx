@@ -48,7 +48,7 @@ const useCountdown = (targetDate) => {
 
 const ROUTE_IMAGE = '/images/carrera/recorrido.jpeg';
 const TRIPTICO_PDF = '/images/triptico.pdf';
-const COMITE_IMAGE = '/images/comite/comite4.jpg';
+const COMITE_IMAGE = '/images/comite/comite4.jpeg';
 
 // Fecha del evento: el contador y el texto en pantalla usan la misma fecha
 const EVENT_DATE = '2026-10-25T07:00:00';

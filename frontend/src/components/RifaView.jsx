@@ -23,10 +23,21 @@ const sliceColor = (i, total) => {
   return COLORS[idx];
 };
 const IDLE_SPEED = 5;     // °/s cuando está en reposo (giro lento)
-const FAST_SPEED = 720;   // °/s al iniciar el sorteo
-const ACCEL = 900;        // °/s²
-const DECEL_MS = 7000;    // duración de la frenada
-const VUELTAS_FRENADA = 5;
+// Velocidad máxima: por debajo de media casilla por cuadro para que no parpadee ni parezca girar al revés
+const FAST_SPEED = 400;   // °/s
+const IMPULSO_MS = 380;   // retroceso breve antes de arrancar, como cuando se jala la ruleta
+const IMPULSO_GRADOS = 14;
+const ACELERACION_MS = 1100;
+const FRENADA_MS = 6500;  // duración aproximada de la frenada
+const FRENADA_POT = 2.2;  // curva de frenado: la ruleta pierde velocidad de forma pareja, sin arrastrarse al final
+const REBOTE_CASILLAS = 0.07; // se pasa un poco y regresa al detenerse
+const REBOTE_MS = 650;
+const PAUSA_GANADOR_MS = 1300; // se resalta la casilla antes de mostrar al ganador
+// Flecha: los clavos de cada casilla la empujan y regresa como resorte
+const FLECHA_MAX = 26;    // grados de desvío máximo
+const FLECHA_CONTACTO = 0.16; // fracción de la casilla en la que el clavo toca la flecha
+const RESORTE_K = 900;
+const RESORTE_AMORT = 20;
 
 const polar = (deg, r) => {
   const rad = (deg * Math.PI) / 180;
@@ -79,9 +90,17 @@ const crearSonidos = () => {
     osc.stop(ctx.currentTime + inicio + dur + 0.02);
   };
 
+  // A alta velocidad los clics se espacian para que no se vuelvan un zumbido
+  let ultimoTick = 0;
+
   return {
     reanudar: () => ctx.state === 'suspended' && ctx.resume(),
-    tick: () => nota(1400, 0, 0.035, 'square', 0.05),
+    tick: () => {
+      if (ctx.currentTime - ultimoTick < 0.045) return;
+      ultimoTick = ctx.currentTime;
+      nota(1500, 0, 0.03, 'square', 0.05);
+    },
+    impulso: () => nota(180, 0, 0.25, 'sine', 0.2),
     fanfarria: () => {
       [523.25, 659.25, 783.99].forEach((f, i) => nota(f, i * 0.13, 0.22));
       nota(1046.5, 0.39, 0.7, 'triangle', 0.22);
@@ -166,6 +185,7 @@ const RifaView = ({ onBack }) => {
   const [sonido, setSonido] = useState(true);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const [reinicio, setReinicio] = useState(null); // null | { texto, enviando }
+  const [casillaGanadora, setCasillaGanadora] = useState(null);
 
   const stageRef = useRef(null);
   const wheelRef = useRef(null);
@@ -173,10 +193,12 @@ const RifaView = ({ onBack }) => {
   const confetiRef = useRef(null);
   const angleRef = useRef(0);
   const speedRef = useRef(IDLE_SPEED);
-  const phaseRef = useRef('idle'); // idle | accel | decel
+  const phaseRef = useRef('idle'); // idle | windup | accel | decel | settle
+  const phaseStartRef = useRef(0);
   const decelRef = useRef(null);
-  const kickRef = useRef(0);       // rebote de la flecha al pasar cada casilla
+  const flechaRef = useRef({ angulo: 0, vel: 0 }); // resorte de la flecha
   const sliceRef = useRef(-1);
+  const pausaRef = useRef(null);
   const segRef = useRef(360);
   const sonidosRef = useRef(null);
   const sonidoRef = useRef(true);
@@ -270,37 +292,82 @@ const RifaView = ({ onBack }) => {
       const dt = Math.min((now - last) / 1000, 0.1);
       last = now;
       const phase = phaseRef.current;
+      const transcurrido = now - phaseStartRef.current;
 
       if (phase === 'idle') {
         if (!reducedMotion.current) angleRef.current += IDLE_SPEED * dt;
+      } else if (phase === 'windup') {
+        // Retrocede un poco y se suelta
+        const t = Math.min(transcurrido / IMPULSO_MS, 1);
+        angleRef.current = decelRef.current.from - IMPULSO_GRADOS * Math.sin((t * Math.PI) / 2);
+        if (t >= 1) {
+          phaseRef.current = 'accel';
+          phaseStartRef.current = now;
+          speedRef.current = 0;
+        }
       } else if (phase === 'accel') {
-        speedRef.current = Math.min(FAST_SPEED, speedRef.current + ACCEL * dt);
+        const t = Math.min(transcurrido / ACELERACION_MS, 1);
+        speedRef.current = FAST_SPEED * (1 - (1 - t) * (1 - t));
         angleRef.current += speedRef.current * dt;
       } else if (phase === 'decel') {
+        // Arranca con la misma velocidad que traía, así no hay saltos
         const d = decelRef.current;
-        const t = Math.min((now - d.start) / d.duration, 1);
-        angleRef.current = d.from + d.delta * (1 - Math.pow(1 - t, 4)); // ease-out cuártico
+        const t = Math.min(transcurrido / d.duration, 1);
+        angleRef.current = d.from + d.delta * (1 - Math.pow(1 - t, FRENADA_POT));
+        if (t >= 1) {
+          phaseRef.current = d.rebote > 0 ? 'settle' : 'idle';
+          phaseStartRef.current = now;
+          d.finFrenada = angleRef.current;
+          if (d.rebote <= 0) d.onEnd();
+        }
+      } else if (phase === 'settle') {
+        // Se pasó un poquito: regresa suave al centro de la casilla
+        const d = decelRef.current;
+        const t = Math.min(transcurrido / REBOTE_MS, 1);
+        const suave = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        angleRef.current = d.finFrenada - d.rebote * suave;
         if (t >= 1) {
           phaseRef.current = 'idle';
-          speedRef.current = IDLE_SPEED;
           d.onEnd();
         }
       }
 
-      // Casilla bajo la flecha: cuando cambia, la flecha rebota y suena un clic
+      // Posición de la flecha dentro de la casilla (0 → 1 en el sentido del giro)
       const rot = ((angleRef.current % 360) + 360) % 360;
-      const casilla = Math.floor(((360 - rot) % 360) / segRef.current);
+      const u = ((360 - rot) % 360) / segRef.current;
+      const casilla = Math.floor(u);
+      const avance = 1 - (u - casilla);
+      const flecha = flechaRef.current;
+      const retrocede = phase === 'windup' || phase === 'settle';
+
+      // Al pasar un clavo la flecha queda empujada al máximo y suena un clic
       if (casilla !== sliceRef.current) {
+        const adelante = sliceRef.current !== -1 && !retrocede;
         sliceRef.current = casilla;
-        if (phase !== 'idle') {
-          kickRef.current = -22;
-          if (sonidoRef.current) sonidosRef.current?.tick();
+        if (adelante) {
+          flecha.angulo = Math.min(flecha.angulo, -FLECHA_MAX);
+          flecha.vel = 0;
+          if (phase !== 'idle' && sonidoRef.current) sonidosRef.current?.tick();
         }
       }
-      kickRef.current *= Math.exp(-dt * 14);
+
+      // El clavo que se acerca empuja la flecha; al soltarla regresa como resorte
+      const empuje = !retrocede && avance > 1 - FLECHA_CONTACTO
+        ? -FLECHA_MAX * ((avance - (1 - FLECHA_CONTACTO)) / FLECHA_CONTACTO)
+        : 0;
+      const pasos = Math.ceil(dt / 0.004);
+      const h = dt / pasos;
+      for (let i = 0; i < pasos; i += 1) {
+        flecha.vel += (-RESORTE_K * flecha.angulo - RESORTE_AMORT * flecha.vel) * h;
+        flecha.angulo += flecha.vel * h;
+        if (empuje < flecha.angulo) {
+          flecha.angulo = empuje;
+          flecha.vel = 0;
+        }
+      }
 
       wheelRef.current?.setAttribute('transform', `rotate(${rot} ${C} ${C})`);
-      pointerRef.current?.setAttribute('transform', `rotate(${kickRef.current} ${C} 14)`);
+      pointerRef.current?.setAttribute('transform', `rotate(${flecha.angulo} ${C} 14)`);
       raf = requestAnimationFrame(frame);
     };
 
@@ -321,8 +388,13 @@ const RifaView = ({ onBack }) => {
     sonidosRef.current?.reanudar();
     setSpinning(true);
     setError('');
-    speedRef.current = IDLE_SPEED;
-    phaseRef.current = reducedMotion.current ? 'idle' : 'accel';
+    setCasillaGanadora(null);
+    if (!reducedMotion.current) {
+      decelRef.current = { from: angleRef.current };
+      phaseStartRef.current = performance.now();
+      phaseRef.current = 'windup';
+      if (sonidoRef.current) sonidosRef.current?.impulso();
+    }
 
     try {
       // El ganador lo decide el servidor; la ruleta gira mientras tanto (mín. 1.2 s)
@@ -340,23 +412,36 @@ const RifaView = ({ onBack }) => {
       const k = Math.floor(Math.random() * n);
       setSlots((prev) => prev.map((s, i) => (i === k ? g.nombre : s)));
 
-      const jitter = (Math.random() - 0.5) * seg * 0.6;
+      // Lejos de los bordes para que no quede duda de en qué casilla cayó
+      const jitter = (Math.random() - 0.5) * seg * 0.5;
       const target = ((-((k + 0.5) * seg + jitter) % 360) + 360) % 360;
       const from = angleRef.current;
-      const adjust = (target - (from % 360) + 360) % 360;
+      const adjust = (((target - from) % 360) + 360) % 360;
+      const rebote = reducedMotion.current ? 0 : REBOTE_CASILLAS * seg;
+
+      // Vueltas y duración calculadas para que la frenada empiece a la velocidad que lleva
+      const v0 = Math.max(speedRef.current, 150);
+      const ideal = (v0 * FRENADA_MS) / 1000 / FRENADA_POT;
+      const vueltas = Math.max(1, Math.round((ideal - adjust - rebote) / 360));
+      const delta = 360 * vueltas + adjust + rebote;
 
       decelRef.current = {
         from,
-        delta: 360 * VUELTAS_FRENADA + adjust,
-        start: performance.now(),
-        duration: reducedMotion.current ? 1500 : DECEL_MS,
+        delta,
+        rebote,
+        duration: reducedMotion.current ? 1500 : (FRENADA_POT * delta * 1000) / v0,
         onEnd: () => {
-          setWinner(g);
-          setSpinning(false);
-          if (sonidoRef.current) sonidosRef.current?.fanfarria();
-          loadGanadores();
+          speedRef.current = IDLE_SPEED;
+          setCasillaGanadora(k);
+          pausaRef.current = setTimeout(() => {
+            setWinner(g);
+            setSpinning(false);
+            if (sonidoRef.current) sonidosRef.current?.fanfarria();
+            loadGanadores();
+          }, reducedMotion.current ? 0 : PAUSA_GANADOR_MS);
         },
       };
+      phaseStartRef.current = performance.now();
       phaseRef.current = 'decel';
     } catch (err) {
       phaseRef.current = 'idle';
@@ -389,8 +474,11 @@ const RifaView = ({ onBack }) => {
     }
   };
 
+  useEffect(() => () => clearTimeout(pausaRef.current), []);
+
   const closeModal = () => {
     setWinner(null);
+    setCasillaGanadora(null);
     loadElegibles();
   };
 
@@ -576,7 +664,11 @@ const RifaView = ({ onBack }) => {
                   <circle cx={C} cy={C} r={R} fill={COLORS[0]} />
                 ) : (
                   slots.map((name, i) => (
-                    <g key={i}>
+                    <g
+                      key={i}
+                      className="rifa-casilla"
+                      opacity={casillaGanadora !== null && casillaGanadora !== i ? 0.35 : 1}
+                    >
                       <path
                         d={slicePath(i * seg, (i + 1) * seg)}
                         fill={sliceColor(i, slots.length)}
@@ -597,6 +689,17 @@ const RifaView = ({ onBack }) => {
                       </text>
                     </g>
                   ))
+                )}
+                {/* Casilla ganadora resaltada mientras se anuncia */}
+                {casillaGanadora !== null && slots.length >= 2 && (
+                  <path
+                    d={slicePath(casillaGanadora * seg, (casillaGanadora + 1) * seg)}
+                    fill="none"
+                    stroke="#F5B942"
+                    strokeWidth="6"
+                    strokeLinejoin="round"
+                    className="rifa-casilla-ganadora"
+                  />
                 )}
               </g>
               <circle cx={C} cy={C} r={R} fill="url(#rifa-brillo)" pointerEvents="none" />
@@ -883,13 +986,19 @@ const RifaView = ({ onBack }) => {
           0%, 100% { opacity: 1; fill: #FFF7D6; }
           50% { opacity: 0.35; fill: #F5B942; }
         }
+        .rifa-casilla { transition: opacity 0.5s ease; }
+        .rifa-casilla-ganadora { animation: rifa-casilla 0.6s ease-in-out infinite alternate; }
+        @keyframes rifa-casilla {
+          from { stroke: #F5B942; stroke-opacity: 1; }
+          to { stroke: #FFFFFF; stroke-opacity: 0.6; }
+        }
         .rifa-ganador { animation: rifa-ganador 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes rifa-ganador {
           from { transform: scale(0.7); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .rifa-foco, .rifa-ganador { animation: none; }
+          .rifa-foco, .rifa-ganador, .rifa-casilla-ganadora { animation: none; }
         }
       `}</style>
     </div>
