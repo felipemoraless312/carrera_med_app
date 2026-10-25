@@ -15,7 +15,7 @@ import ScrollToTop from './components/ScrollToTop.jsx';
 import RifaView from './components/RifaView.jsx';
 import RecuperarFolio from './components/RecuperarFolio.jsx';
 import PantallaPatrocinadores from './components/PantallaPatrocinadores.jsx';
-import PantallasComite from './components/PantallasComite.jsx';
+import PantallaComite from './components/PantallaComite.jsx';
 
 // Rutas de pantalla completa que no llevan barra de navegación ni pie de página
 const RUTAS_SIN_MARCO = ['/pantalla-patrocinadores', '/comite'];
@@ -46,7 +46,7 @@ const App = () => {
             <Route path="/patrocinadores" element={<div className="pt-20"><SponsorsSection /></div>} />
             <Route path="/contacto" element={<div className="pt-20"><ContactSection /></div>} />
             <Route path="/pantalla-patrocinadores" element={<PantallaPatrocinadores />} />
-            <Route path="/comite" element={<PantallasComite />} />
+            <Route path="/comite" element={<PantallaComite />} />
             
             {/* Rutas secretas de administración */}
             <Route 

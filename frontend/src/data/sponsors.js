@@ -34,7 +34,6 @@ export const SPONSORS = [
   { name: 'Diario de Chiapas', image: '/images/patrocinadores/logos/diario-de-chiapas.png' },
   { name: 'PiSA', image: '/images/patrocinadores/logos/pisa.jpg' },
   { name: 'iCard', image: '/images/patrocinadores/logos/icard.jpg' },
-  { name: 'Salud Digna', image: '/images/patrocinadores/logos/salud-digna.jpg' },
   { name: 'VP Hospital', image: '/images/patrocinadores/circulares/vp-hospital.webp', circular: true },
   { name: 'Hospital Rojas', image: '/images/patrocinadores/circulares/hospital-rojas.webp', circular: true },
   { name: "Nature's Sunshine Products", image: '/images/patrocinadores/circulares/natures-sunshine.webp', circular: true },

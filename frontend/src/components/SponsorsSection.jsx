@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import { SPONSORS as sponsors } from '../data/sponsors.js';
+import { COMITE as organizingCommittee, FOTOS_COMITE as committeePhotos } from '../data/comite.js';
 import { Heart, Users } from 'lucide-react';
 
 const SPONSORS_DURATION_S = 100;
@@ -23,24 +24,6 @@ const SponsorsSection = () => {
     const fraccion = (((desplazamiento / periodo) % 1) + 1) % 1;
     track.style.animationDelay = `-${fraccion * SPONSORS_DURATION_S}s`;
   }, []);
-
-  const organizingCommittee = [
-    { name: 'Lic. Carolina Toledo Coutiño' },
-    { name: 'Ing. Enrique Tadeo Santoyo Espinosa', position: 'Director de Ingeniería Biomédica', image: '/images/personas/tadeo.png' },
-    { name: 'Dr. Fernando Tapia Garduño' },
-    { name: 'Dr. Humberto Cunjama Sánchez' },
-    { name: 'Sr. Roberto Maza Suárez' },
-    { name: 'Ing. Alexander Arroyo Núñez', position: 'Especialista', image: '/images/personas/alexander.png' },
-    { name: 'Dr. Hernán León Velasco', position: 'Especialista', image: '/images/personas/hernan_leon.jpg' },
-    { name: 'Dr. Víctor Clemente Ovalle' },
-    { name: 'Dr. Humberto Hernández Rojas', position: 'Especialista', image: '/images/personas/humberto_rojas.jpg' },
-    { name: 'Lic. Manuel Narcia' },
-    { name: 'Dr. Juan Carlos Álvarez', position: 'Especialista', image: '/images/personas/juan_carlos.png' },
-    { name: 'Lic. María Luisa Cano Maldonado' },
-    { name: 'Dr. Francisco A. Ramos Narváez', position: 'Cirujano Gastroenterologo', image: '/images/personas/ramos.png' }
-  ];
-
-  const committeePhotos = ['comite3.jpg', 'comite.jpg', 'comite2.jpg'];
 
   const developmentTeam = [
     { name: 'Ing. Cesar Gomez Aguilera', image: '/images/personas/aguilera.png' },
